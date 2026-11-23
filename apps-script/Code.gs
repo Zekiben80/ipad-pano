@@ -48,9 +48,66 @@ function doGet(e) {
   }
 }
 
+var BEREICHE = ['kalender', 'wetter', 'fotos', 'countdown'];
+
+/** Admin-Seite: Änderungen speichern. Body (text/plain): {"k":TOKEN, "anzeige":{...}, "stadt":"...", "countdowns":[...]} */
+function doPost(e) {
+  var body;
+  try { body = JSON.parse(e.postData.contents); } catch (x) { return json({ hata: 'format' }); }
+  var einst = einstellungenLesen();
+  if (!einst.token || body.k !== einst.token) return json({ hata: 'yetki' });
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    if (body.anzeige) {
+      BEREICHE.forEach(function (n) {
+        if (n in body.anzeige) einstellungSetzen('zeige_' + n, body.anzeige[n] === true, 'Auf dem Pano anzeigen (Admin-Seite).');
+      });
+    }
+    if (typeof body.stadt === 'string') einstellungSetzen('stadt', body.stadt.trim().slice(0, 80));
+    if (Array.isArray(body.countdowns)) countdownsSchreiben(body.countdowns);
+    SpreadsheetApp.flush();
+    return json(daten(einstellungenLesen()));
+  } catch (err) {
+    return json({ hata: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function einstellungSetzen(name, wert, erklaerung) {
+  var sh = blattHolen(SpreadsheetApp.getActiveSpreadsheet(), BLATT.einst);
+  var n = sh.getLastRow();
+  var namen = n >= 2 ? sh.getRange(2, 1, n - 1, 1).getValues().map(function (r) { return String(r[0]).trim(); }) : [];
+  var i = namen.indexOf(name);
+  var zeile = i === -1 ? n + 1 : i + 2;
+  if (i === -1) sh.getRange(zeile, 1, 1, 3).setValues([[name, '', erklaerung || '']]);
+  if (typeof wert === 'boolean') sh.getRange(zeile, 2).insertCheckboxes();
+  sh.getRange(zeile, 2).setValue(wert);
+}
+
+function countdownsSchreiben(liste) {
+  var sh = blattHolen(SpreadsheetApp.getActiveSpreadsheet(), BLATT.countdown);
+  var zeilen = liste.filter(function (x) {
+    return x && String(x.ad || '').trim() && /^\d{4}-\d{2}-\d{2}$/.test(x.tarih);
+  }).slice(0, 100).map(function (x) {
+    var p = x.tarih.split('-');
+    return [String(x.ad).trim().slice(0, 60), new Date(+p[0], +p[1] - 1, +p[2]), x.yillik === true];
+  });
+  var n = sh.getLastRow();
+  if (n >= 2) sh.getRange(2, 1, n - 1, 3).clearContent();
+  if (zeilen.length) {
+    sh.getRange(2, 1, zeilen.length, 3).setValues(zeilen);
+    sh.getRange(2, 2, zeilen.length, 1).setNumberFormat('dd.MM.yyyy');
+  }
+}
+
 function daten(einst) {
+  var anzeige = {};
+  BEREICHE.forEach(function (n) { anzeige[n] = einst['zeige_' + n] !== false; });
   return {
     zaman: new Date().toISOString(),
+    anzeige: anzeige,
     sehir: einst.stadt || '',
     etkinlikler: termine(einst),
     notlar: notizen(),

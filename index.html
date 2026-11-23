@@ -28,6 +28,12 @@ ul{list-style:none}
   background:linear-gradient(100deg,rgba(4,6,10,.66) 0%,rgba(4,6,10,.30) 52%,rgba(4,6,10,.58) 100%)}
 body.gece #karart{background:rgba(0,0,0,.82)}
 body.gece .foto{opacity:0!important}
+/* Bereiche ein-/ausblenden (Admin-Seite) */
+body.ohne-wetter .hava,body.ohne-kalender .takvim,body.ohne-countdown .sayimlar,body.ohne-rechts .sag{display:none!important}
+body.ohne-rechts #pano{grid-template-columns:1fr}
+body.ohne-kalender .sag{justify-content:center}
+body:not(.fotoVar) .sol{justify-content:center}
+
 /* Foto-Rahmen */
 .cerceve{display:none;flex:1;min-height:0;padding:0}
 body.fotoVar .cerceve{display:block}
@@ -192,7 +198,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 (function () {
   'use strict';
 
-  var AYAR = { veriDk: 5, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
+  var AYAR = { veriDk: 2, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
   var GUN = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   var GUN_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   var AY = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
@@ -265,7 +271,13 @@ body.sadeceFoto #tamFoto{opacity:1}
 
   function durum(m, hata) { var el = $('durum'); el.textContent = m; el.className = hata ? 'hata' : ''; }
 
-  function ciz() { takvimCiz(); etkinlikCiz(); sayimCiz(); }
+  function ciz() { anzeigeAnwenden(); takvimCiz(); etkinlikCiz(); sayimCiz(); }
+
+  function anzeigeAnwenden() {
+    var a = veri.anzeige || {}, b = document.body.classList;
+    ['kalender', 'wetter', 'fotos', 'countdown'].forEach(function (n) { b.toggle('ohne-' + n, a[n] === false); });
+    b.toggle('ohne-rechts', a.kalender === false && a.wetter === false);
+  }
 
   function etkinlikBaslangic(e) { return e.g ? yerelTarih(e.b) : new Date(e.b); }
   function etkinlikBitis(e) { return e.g ? yerelTarih(e.s) : new Date(e.s); }
@@ -394,7 +406,7 @@ body.sadeceFoto #tamFoto{opacity:1}
   /* ---------- Fotoğraflar ---------- */
   var fotoSira = [], fotoIdx = -1, aktif = 'fA', fotoZamanlayici = null, fotoAnahtar = '';
   function fotolarHazirla() {
-    var list = (veri.fotolar || []).slice();
+    var list = veri.anzeige && veri.anzeige.fotos === false ? [] : (veri.fotolar || []).slice();
     var anahtar = list.join(',');
     if (anahtar === fotoAnahtar) return;
     fotoAnahtar = anahtar;

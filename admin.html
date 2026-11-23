@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pano Admin">
+<meta name="theme-color" content="#07090d">
+<meta name="robots" content="noindex">
+<title>Pano Admin</title>
+<style>
+:root{--metin:#f5f7fb;--soluk:rgba(245,247,251,.64);--cok-soluk:rgba(245,247,251,.4);--vurgu:#ffd27a;--yesil:#5fd49a;--kirmizi:#ff8a7a;--yaricap:24px}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#07090d}
+body{min-height:100vh;color:var(--metin);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  background:radial-gradient(120% 70% at 10% 0%,#2b3754 0%,#121826 50%,#07090d 100%) fixed;
+  padding:calc(16px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))}
+main{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:8px 4px 0}
+.unter{color:var(--soluk);font-size:15px;margin:0 4px 6px}
+.cam{position:relative;border-radius:var(--yaricap);padding:18px;overflow:hidden;
+  background:linear-gradient(155deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,.05) 45%,rgba(255,255,255,.08) 100%);
+  -webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%);
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.36),inset 0 -1px 0 rgba(0,0,0,.28),0 20px 40px -14px rgba(0,0,0,.6)}
+.cam::before{content:"";position:absolute;left:0;right:0;top:0;height:44%;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,0))}
+h2{font-size:13px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--soluk);margin-bottom:10px}
+
+/* Schalter */
+.zeile{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid rgba(255,255,255,.08)}
+.zeile:first-of-type{border-top:0}
+.zeile .ad{flex:1;font-size:17px}
+.zeile .ad small{display:block;font-size:13px;color:var(--cok-soluk);margin-top:2px}
+.sw{position:relative;width:52px;height:32px;flex:none;margin:0!important}
+.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:20px;background:rgba(255,255,255,.18);box-shadow:inset 0 1px 2px rgba(0,0,0,.35);transition:background .2s}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:linear-gradient(180deg,#fff,#e4e8f0);box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .2s}
+.sw input:checked + span{background:var(--yesil)}
+.sw input:checked + span::after{transform:translateX(20px)}
+
+/* Countdowns */
+.cd{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.08)}
+.cd:first-child{border-top:0}
+.cd .tage{min-width:56px;text-align:center;font-size:20px;font-weight:600;color:var(--vurgu);font-variant-numeric:tabular-nums;line-height:1.05}
+.cd .tage i{display:block;font-style:normal;font-size:11px;font-weight:500;color:var(--cok-soluk)}
+.cd .txt{flex:1;min-width:0}
+.cd .txt b{display:block;font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd .txt span{font-size:13px;color:var(--soluk)}
+.loesch{flex:none;width:38px;height:38px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--kirmizi);font-size:20px;line-height:1}
+.leer{color:var(--cok-soluk);font-size:15px;padding:6px 0}
+
+/* Formular */
+label{display:block;font-size:13px;color:var(--soluk);margin:12px 0 6px}
+input[type=text],input[type=url],input[type=date]{width:100%;font:inherit;font-size:17px;color:var(--metin);padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);outline:none;-webkit-appearance:none;appearance:none;min-height:48px}
+input:focus{border-color:rgba(255,255,255,.5)}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
+.reihe{display:flex;gap:10px;align-items:flex-end}
+.reihe > div{flex:1}
+.dugme{display:block;width:100%;font:inherit;font-size:17px;font-weight:600;padding:14px;margin-top:14px;border-radius:16px;border:1px solid rgba(255,255,255,.25);color:#0c0f16;background:linear-gradient(180deg,#fff,#dfe4ee);box-shadow:inset 0 1px 0 #fff,0 10px 22px -8px rgba(0,0,0,.6)}
+.dugme:disabled{opacity:.5}
+.dugme.ikincil{color:var(--metin);background:rgba(255,255,255,.08)}
+.fuss{text-align:center;color:var(--cok-soluk);font-size:13px;line-height:1.5}
+.fuss a{color:var(--soluk)}
+
+/* Meldung */
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;transition:opacity .25s,transform .25s;
+  padding:12px 18px;border-radius:16px;font-size:15px;font-weight:500;background:rgba(20,26,38,.85);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.15);pointer-events:none;white-space:nowrap}
+#toast.an{opacity:1;transform:translate(-50%,0)}
+#toast.fehler{color:var(--kirmizi)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Pano Admin</h1>
+    <p class="unter" id="status">Wird geladen …</p>
+  </div>
+
+  <form class="cam" id="einrichten" hidden autocomplete="off">
+    <h2>Einrichten</h2>
+    <label for="eApi">Web-App-Adresse</label>
+    <input id="eApi" type="url" placeholder="https://script.google.com/macros/s/.../exec" required>
+    <label for="eKey">Token</label>
+    <input id="eKey" type="text" required>
+    <button class="dugme" type="submit">Speichern</button>
+  </form>
+
+  <div id="inhalt" hidden>
+    <section class="cam" style="margin-bottom:16px">
+      <h2>Auf dem Pano anzeigen</h2>
+      <div id="schalter"></div>
+    </section>
+
+    <section class="cam" style="margin-bottom:16px">
+      <h2>Countdowns</h2>
+      <div id="cdListe"></div>
+      <form id="cdNeu" autocomplete="off">
+        <label for="cdName">Neuer Countdown</label>
+        <input id="cdName" type="text" placeholder="z. B. Urlaub" maxlength="60" required>
+        <div class="reihe">
+          <div><label for="cdDatum">Datum</label><input id="cdDatum" type="date" required></div>
+          <div style="flex:none"><div class="zeile" style="border:0;padding:0 0 8px"><span class="ad" style="font-size:15px;color:var(--soluk)">Jährlich</span><label class="sw" style="margin:0"><input id="cdJahr" type="checkbox"><span></span></label></div></div>
+        </div>
+        <button class="dugme" type="submit">Hinzufügen</button>
+      </form>
+    </section>
+
+    <section class="cam">
+      <h2>Wetter</h2>
+      <form id="stadtForm" autocomplete="off">
+        <label for="stadt">Stadt</label>
+        <input id="stadt" type="text" placeholder="Leer = Standort des iPads">
+        <button class="dugme ikincil" type="submit">Stadt speichern</button>
+      </form>
+    </section>
+  </div>
+
+  <p class="fuss">Änderungen erscheinen auf dem iPad innerhalb von 2 Minuten.<br><a href="./">Pano öffnen</a></p>
+</main>
+<div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+  var BEREICHE = [
+    { n: 'kalender', ad: 'Kalender', info: 'Monat und Termine' },
+    { n: 'wetter', ad: 'Wetter', info: 'Aktuell und 5 Tage' },
+    { n: 'fotos', ad: 'Fotos', info: 'Album aus Google Drive' },
+    { n: 'countdown', ad: 'Countdowns', info: 'Tage bis zu Terminen' }
+  ];
+  var MONATE = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'];
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var LS = {
+    get: function (k) { try { return JSON.parse(localStorage.getItem('pano.' + k)); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem('pano.' + k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  var q = new URLSearchParams(location.search);
+  if (q.get('api')) LS.set('api', q.get('api'));
+  if (q.get('k')) LS.set('k', q.get('k'));
+  var API = LS.get('api'), KEY = LS.get('k');
+  var daten = null, laeuft = false;
+
+  var toastZ;
+  function toast(m, fehler) {
+    var t = $('toast'); t.textContent = m; t.className = 'an' + (fehler ? ' fehler' : '');
+    clearTimeout(toastZ); toastZ = setTimeout(function () { t.className = ''; }, 2200);
+  }
+
+  function laden() {
+    return fetch(API + '?k=' + encodeURIComponent(KEY)).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.hata) throw new Error(d.hata === 'yetki' ? 'Token falsch' : d.hata);
+      daten = d; zeigen();
+      $('status').textContent = 'Verbunden';
+    });
+  }
+
+  function senden(body, meldung) {
+    if (laeuft) return Promise.resolve();
+    laeuft = true; body.k = KEY;
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.hata) throw new Error(d.hata === 'yetki' ? 'Token falsch' : d.hata);
+        daten = d; zeigen(); toast(meldung || 'Gespeichert');
+      })
+      .catch(function (e) { toast('Fehler: ' + e.message, true); zeigen(); })
+      .then(function () { laeuft = false; });
+  }
+
+  function tageBis(x) {
+    var heute = new Date(); heute.setHours(0, 0, 0, 0);
+    var p = x.tarih.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2]);
+    if (x.yillik) { d.setFullYear(heute.getFullYear()); if (d < heute) d.setFullYear(heute.getFullYear() + 1); }
+    return Math.round((d - heute) / 864e5);
+  }
+  function datumText(s) { var p = s.split('-'); return (+p[2]) + '. ' + MONATE[+p[1] - 1] + ' ' + p[0]; }
+
+  function zeigen() {
+    var a = daten.anzeige || {};
+    $('schalter').innerHTML = BEREICHE.map(function (b) {
+      return '<div class="zeile"><div class="ad">' + b.ad + '<small>' + b.info + '</small></div>' +
+        '<label class="sw"><input type="checkbox" data-n="' + b.n + '"' + (a[b.n] !== false ? ' checked' : '') + ' aria-label="' + b.ad + ' anzeigen"><span></span></label></div>';
+    }).join('');
+
+    var liste = (daten.sayimlar || []).slice().sort(function (x, y) { return tageBis(x) - tageBis(y); });
+    $('cdListe').innerHTML = liste.length ? liste.map(function (x) {
+      var t = tageBis(x), i = daten.sayimlar.indexOf(x);
+      var tage = t < 0 ? '–' : t === 0 ? 'Heute' : t + '<i>' + (t === 1 ? 'Tag' : 'Tage') + '</i>';
+      return '<div class="cd"><div class="tage">' + tage + '</div><div class="txt"><b>' + esc(x.ad) + '</b><span>' +
+        datumText(x.tarih) + (x.yillik ? ' · jährlich' : '') + (t < 0 ? ' · vorbei' : '') + '</span></div>' +
+        '<button class="loesch" type="button" data-i="' + i + '" aria-label="' + esc(x.ad) + ' löschen">×</button></div>';
+    }).join('') : '<div class="leer">Noch keine Countdowns</div>';
+
+    if (document.activeElement !== $('stadt')) $('stadt').value = daten.sehir || '';
+  }
+
+  $('schalter').addEventListener('change', function (e) {
+    var n = e.target.getAttribute('data-n'); if (!n) return;
+    var anzeige = {}; anzeige[n] = e.target.checked;
+    senden({ anzeige: anzeige }, e.target.checked ? 'Wird angezeigt' : 'Ausgeblendet');
+  });
+
+  $('cdListe').addEventListener('click', function (e) {
+    var i = e.target.getAttribute('data-i'); if (i === null) return;
+    var x = daten.sayimlar[+i];
+    if (!confirm('„' + x.ad + '“ löschen?')) return;
+    var neu = daten.sayimlar.filter(function (_, j) { return j !== +i; });
+    senden({ countdowns: neu }, 'Gelöscht');
+  });
+
+  $('cdNeu').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var neu = (daten.sayimlar || []).concat([{ ad: $('cdName').value.trim(), tarih: $('cdDatum').value, yillik: $('cdJahr').checked }]);
+    senden({ countdowns: neu }, 'Hinzugefügt').then(function () { $('cdNeu').reset(); });
+  });
+
+  $('stadtForm').addEventListener('submit', function (e) {
+    e.preventDefault(); $('stadt').blur();
+    senden({ stadt: $('stadt').value }, 'Stadt gespeichert');
+  });
+
+  $('einrichten').addEventListener('submit', function (e) {
+    e.preventDefault();
+    LS.set('api', $('eApi').value.trim()); LS.set('k', $('eKey').value.trim());
+    location.replace(location.pathname);
+  });
+
+  if (!API || !KEY) { $('einrichten').hidden = false; $('status').textContent = 'Einmalig einrichten'; return; }
+  laden().then(function () { $('inhalt').hidden = false; }).catch(function (e) {
+    $('status').textContent = 'Keine Verbindung: ' + e.message;
+    $('einrichten').hidden = false;
+  });
+})();
+</script>
+</body>
+</html>
