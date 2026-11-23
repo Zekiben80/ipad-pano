@@ -248,6 +248,7 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
     if (DEMO) { veri = demoVeri(); ciz(); fotolarHazirla(); durum('Demo-Modus'); return Promise.resolve(); }
     return getJSON(API + '?k=' + enc(KEY)).then(function (v) {
       if (v.hata) throw new Error(v.hata === 'yetki' ? 'Token falsch' : v.hata);
+      v.etkinlikler = (v.etkinlikler || []).filter(function (e) { return !/^Kalenderwoche \d+/.test(e.t); });
       var eskiSehir = veri.sehir;
       veri = v; LS.set('veri', v);
       ciz(); fotolarHazirla();
