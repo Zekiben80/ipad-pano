@@ -51,6 +51,11 @@ body.gece .foto{opacity:0!important}
 .radio.spielt .eq{display:flex}
 @keyframes eq{from{height:4px}to{height:20px}}
 
+/* Zeitplan: außerhalb der Zeit komplett schwarz (Tippen weckt 1 Minute) */
+#ds,#dsRadio,#effekt{transition:opacity 1.2s}
+html body.aus #pano,html body.aus #ds,html body.aus #dsRadio,html body.aus #effekt,html body.aus #durum{opacity:0!important;pointer-events:none}
+html body.aus #karart{background:#000!important;opacity:1!important}
+
 /* Wettereffekt (Regen/Schnee) über allem, aber unter der Diashow-Schrift */
 #effekt{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;display:none}
 
@@ -288,7 +293,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 (function () {
   'use strict';
 
-  var VERSION = '11';   // bei jeder Änderung zusammen mit version.json erhöhen
+  var VERSION = '12';   // bei jeder Änderung zusammen mit version.json erhöhen
   var AYAR = { veriDk: 2, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
   var GUN = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   var GUN_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -340,6 +345,18 @@ body.sadeceFoto #tamFoto{opacity:1}
   }
   function saatYaz(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 
+  /* Zeitplan aus der Admin-Seite (optionen.zeit_aktiv/zeit_an/zeit_aus). Ohne Zeitplan: Nachtmodus 23–6 Uhr. */
+  function minuten(s) { var m = /^(\d{1,2}):(\d{2})$/.exec(s || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+  function zeitplan(d) {
+    var o = (typeof veri !== 'undefined' && veri && veri.optionen) || {};
+    var jetzt = d.getHours() * 60 + d.getMinutes(), an = minuten(o.zeit_an), aus = minuten(o.zeit_aus);
+    if (o.zeit_aktiv === true && an !== null && aus !== null && an !== aus) {
+      var laeuft = an < aus ? (jetzt >= an && jetzt < aus) : (jetzt >= an || jetzt < aus);
+      return { plan: true, aus: !laeuft };
+    }
+    return { plan: false, aus: d.getHours() >= AYAR.geceBas || d.getHours() < AYAR.geceBit };
+  }
+
   /* ---------- Saat, gece modu ---------- */
   var sonGun = -1, uyanikBitis = 0;
   function saatGuncelle() {
@@ -348,8 +365,11 @@ body.sadeceFoto #tamFoto{opacity:1}
     $('tarih').innerHTML = esc(GUN[d.getDay()]) + ' <span>' + d.getDate() + '. ' + AY[d.getMonth()] + '</span>';
     $('dsSaat').textContent = $('saat').textContent;
     $('dsTarih').textContent = GUN[d.getDay()] + ', ' + d.getDate() + '. ' + AY[d.getMonth()];
-    var gece = (d.getHours() >= AYAR.geceBas || d.getHours() < AYAR.geceBit) && Date.now() > uyanikBitis;
-    document.body.classList.toggle('gece', gece);
+    var z = zeitplan(d);
+    var schlaf = z.aus && Date.now() > uyanikBitis;
+    document.body.classList.toggle('gece', schlaf);
+    document.body.classList.toggle('aus', schlaf && z.plan);
+    if (schlaf && z.plan && radioAn) radioStop();
     if (d.getDate() !== sonGun) { sonGun = d.getDate(); ciz(); }
     setTimeout(saatGuncelle, 1000 - d.getMilliseconds() + 20);
   }
@@ -720,7 +740,7 @@ body.sadeceFoto #tamFoto{opacity:1}
   var sadeceFotoZ = null;
   document.addEventListener('click', function (ev) {
     if (!$('kurulum').hidden) return;
-    if (document.body.classList.contains('gece')) { uyanikBitis = Date.now() + 60000; document.body.classList.remove('gece'); return; }
+    if (document.body.classList.contains('gece')) { uyanikBitis = Date.now() + 60000; document.body.classList.remove('gece', 'aus'); return; }
     if (!fotoSira.length || document.body.classList.contains('diashow')) return;
     $('tamFoto').style.backgroundImage = $(aktif).style.backgroundImage;
     var b = document.body.classList.toggle('sadeceFoto');
@@ -742,6 +762,7 @@ body.sadeceFoto #tamFoto{opacity:1}
     return {
       layout: lay || undefined,
       modus: q.get('modus') || 'standard',
+      optionen: q.get('zeit') ? { zeit_aktiv: true, zeit_an: q.get('zeit').split('-')[0], zeit_aus: q.get('zeit').split('-')[1] } : {},
       sehir: 'Köln',
       etkinlikler: [
         { t: 'Sellbird Teammeeting', g: false, b: t(0, s.getHours(), 0), s: t(0, s.getHours() + 1, 0), r: '#7aa2ff' },

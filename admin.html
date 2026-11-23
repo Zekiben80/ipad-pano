@@ -52,7 +52,7 @@ h2{font-size:13px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
 
 /* Formular */
 label{display:block;font-size:13px;color:var(--soluk);margin:12px 0 6px}
-input[type=text],input[type=url],input[type=date]{width:100%;font:inherit;font-size:17px;color:var(--metin);padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);outline:none;-webkit-appearance:none;appearance:none;min-height:48px}
+input[type=text],input[type=url],input[type=date],input[type=time]{width:100%;font:inherit;font-size:17px;color:var(--metin);padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);outline:none;-webkit-appearance:none;appearance:none;min-height:48px}
 input:focus{border-color:rgba(255,255,255,.5)}
 select{width:100%;font:inherit;font-size:17px;color:var(--metin);padding:12px 40px 12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.18);min-height:48px;-webkit-appearance:none;appearance:none;
   background:rgba(0,0,0,.25) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center}
@@ -133,6 +133,18 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <button type="button" class="modus" data-m="standard"><span class="m-bild m-standard"><i></i><i></i><i></i></span><b>Standard</b><small>Uhr, Wetter, Kalender …</small></button>
         <button type="button" class="modus" data-m="diashow"><span class="m-bild m-dia"><em>12:30</em><em>3°</em></span><b>Diashow</b><small>Fotos im Vollbild</small></button>
       </div>
+    </section>
+
+    <section class="cam" style="margin-bottom:16px">
+      <h2>Zeitplan</h2>
+      <div class="zeile" style="border:0;padding-top:0"><div class="ad">Nur zu bestimmten Zeiten an<small>Sonst bleibt der Bildschirm schwarz</small></div>
+        <label class="sw"><input type="checkbox" id="zAktiv" aria-label="Zeitplan aktiv"><span></span></label></div>
+      <div class="reihe" id="zZeiten">
+        <div><label for="zAn">An ab</label><input id="zAn" type="time" value="17:30"></div>
+        <div><label for="zAus">Aus ab</label><input id="zAus" type="time" value="22:30"></div>
+      </div>
+      <button class="dugme ikincil" type="button" id="zSpeichern">Zeitplan speichern</button>
+      <p class="hinweis">Antippen weckt das Pano für 1 Minute. Ohne Zeitplan wird es nur nachts (23–6 Uhr) dunkel.</p>
     </section>
 
     <section class="cam" style="margin-bottom:16px">
@@ -323,6 +335,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
       b.classList.toggle('aktiv', an); b.setAttribute('aria-pressed', an);
     });
     var o = daten.optionen || {};
+    $('zAktiv').checked = o.zeit_aktiv === true;
+    if (document.activeElement !== $('zAn') && o.zeit_an) $('zAn').value = o.zeit_an;
+    if (document.activeElement !== $('zAus') && o.zeit_aus) $('zAus').value = o.zeit_aus;
+    $('zZeiten').style.opacity = $('zAktiv').checked ? '' : '.45';
     $('dsSchalter').innerHTML = DS_TEILE.map(function (t) {
       return '<div class="zeile"><div class="ad">' + t.ad + '<small>' + t.info + '</small></div>' +
         '<label class="sw"><input type="checkbox" data-o="' + t.n + '"' + (o[t.n] !== false ? ' checked' : '') + ' aria-label="' + t.ad + ' in der Diashow"><span></span></label></div>';
@@ -338,6 +354,19 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     { n: 'ds_tage', ad: '5-Tage-Vorhersage', info: 'Unter der Temperatur' },
     { n: 'ds_radio', ad: 'Radio', info: 'Kleine Leiste oben rechts' }
   ];
+  function zeitplanSenden(meldung) {
+    var an = $('zAn').value, aus = $('zAus').value;
+    if (!/^\d{2}:\d{2}$/.test(an) || !/^\d{2}:\d{2}$/.test(aus) || an === aus) { toast('Bitte zwei verschiedene Uhrzeiten wählen', true); return; }
+    var opt = { zeit_aktiv: $('zAktiv').checked, zeit_an: an, zeit_aus: aus };
+    daten.optionen = daten.optionen || {}; Object.keys(opt).forEach(function (k) { daten.optionen[k] = opt[k]; });
+    senden({ optionen: opt }, meldung);
+  }
+  $('zAktiv').addEventListener('change', function () {
+    $('zZeiten').style.opacity = this.checked ? '' : '.45';
+    zeitplanSenden(this.checked ? 'Zeitplan an: ' + $('zAn').value + '–' + $('zAus').value : 'Zeitplan aus');
+  });
+  $('zSpeichern').addEventListener('click', function () { zeitplanSenden('Zeitplan gespeichert: ' + $('zAn').value + '–' + $('zAus').value); });
+
   $('dsSchalter').addEventListener('change', function (e) {
     var n = e.target.getAttribute('data-o'); if (!n) return;
     var opt = {}; opt[n] = e.target.checked;
