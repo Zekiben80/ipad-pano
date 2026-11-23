@@ -27,6 +27,8 @@ ul{list-style:none}
 .foto::before,.foto::after{content:"";position:absolute;background-image:inherit;background-repeat:no-repeat;background-position:center}
 .foto::before{inset:-40px;background-size:cover;filter:blur(28px) brightness(.5) saturate(1.15)}
 .foto::after{inset:0;background-size:contain}
+/* Tablet quer + Hochformat-Foto: füllen statt kleiner Streifen; oben verankert, damit Köpfe sichtbar bleiben */
+@media (min-aspect-ratio:1/1){ .foto.hoch::after{background-size:cover;background-position:center 18%} }
 .foto.acik{opacity:1}
 #karart{position:fixed;inset:0;transition:opacity 1s,background 1s;
   background:linear-gradient(100deg,rgba(4,6,10,.66) 0%,rgba(4,6,10,.30) 52%,rgba(4,6,10,.58) 100%)}
@@ -607,6 +609,7 @@ body.sadeceFoto #tamFoto{opacity:1}
       img.onload = function () {
         var yeni = $(aktif === 'fA' ? 'fB' : 'fA'), eski = $(aktif);
         yeni.style.zIndex = 2; eski.style.zIndex = 1;
+        yeni.classList.toggle('hoch', img.naturalHeight > img.naturalWidth);
         yeni.style.backgroundImage = 'url("' + r.url + '")';
         requestAnimationFrame(function () { yeni.classList.add('acik'); });
         setTimeout(function () { eski.classList.remove('acik'); eski.style.backgroundImage = ''; }, 2600);
