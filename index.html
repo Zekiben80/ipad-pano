@@ -473,7 +473,6 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
 
   saatGuncelle();
   if (!DEMO && (!API || !KEY)) { kurulumGoster(); return; }
-  if (q.has('api') || q.has('k')) history.replaceState(null, '', location.pathname);
 
   ciz();
   var eskiHava = LS.get('hava'); if (eskiHava) havaCiz(eskiHava);
