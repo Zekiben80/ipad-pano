@@ -116,6 +116,7 @@ function doPost(e) {
         if (n in body.anzeige) einstellungSetzen('zeige_' + n, body.anzeige[n] === true, 'Auf dem Pano anzeigen (Admin-Seite).');
       });
     }
+    if (body.optionen && typeof body.optionen === 'object' && !Array.isArray(body.optionen)) optionenSetzen(body.optionen, einst);
     if (body.modus === 'standard' || body.modus === 'diashow') einstellungSetzen('modus', body.modus, 'Ansicht: standard oder diashow (Admin-Seite).');
     if (Array.isArray(body.radio)) einstellungSetzen('radio', JSON.stringify(radioPruefen(body.radio)), 'Radiosender (Admin-Seite).');
     if (body.layout) einstellungSetzen('layout', JSON.stringify(layoutPruefen(body.layout)), 'Anordnung (Admin-Seite).');
@@ -130,6 +131,22 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/** Allgemeine Schalter (z. B. Diashow-Elemente). Neue Schalter brauchen kein Script-Update. */
+function optionenLesen(einst) {
+  try { var o = JSON.parse(einst.optionen || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
+}
+function optionenSetzen(neu, einst) {
+  var o = optionenLesen(einst);
+  Object.keys(neu).slice(0, 50).forEach(function (k) {
+    if (!/^[a-z0-9_]{1,40}$/.test(k)) return;
+    var v = neu[k];
+    if (typeof v === 'boolean' || typeof v === 'number' || (typeof v === 'string' && v.length <= 200)) o[k] = v;
+  });
+  var s = JSON.stringify(o);
+  if (s.length > 5000) throw new Error('Zu viele Optionen');
+  einstellungSetzen('optionen', s, 'Weitere Schalter (Admin-Seite).');
 }
 
 function einstellungSetzen(name, wert, erklaerung) {
@@ -183,6 +200,7 @@ function daten(einst) {
     zaman: new Date().toISOString(),
     anzeige: anzeige,
     modus: einst.modus === 'diashow' ? 'diashow' : 'standard',
+    optionen: optionenLesen(einst),
     layout: layoutLesen(einst),
     radio: radioLesen(einst),
     sehir: einst.stadt || '',

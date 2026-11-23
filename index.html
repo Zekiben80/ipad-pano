@@ -71,6 +71,22 @@ body.diashow #ds{display:flex}
 .ds-tag .ikon{display:flex;justify-content:center;margin:5px 0 4px}
 .ds-tag .ikon svg{width:34px;height:34px;filter:drop-shadow(0 1px 6px rgba(0,0,0,.55))}
 .ds-tag em{font-style:normal;color:rgba(255,255,255,.7);margin-left:5px}
+/* Diashow-Elemente einzeln ausblendbar (Admin) */
+body.ds-ohne-uhr .ds-uhr,body.ds-ohne-wetter .ds-temp,body.ds-ohne-tage .ds-tage{visibility:hidden}
+/* Diashow-Radio: kleine Leiste oben rechts */
+#dsRadio{display:none;position:fixed;z-index:7;top:calc(20px + env(safe-area-inset-top));right:calc(22px + env(safe-area-inset-right));
+  align-items:center;gap:10px;padding:7px 8px 7px 7px;border-radius:999px;max-width:300px;
+  background:rgba(8,10,16,.32);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.16);box-shadow:0 8px 24px -10px rgba(0,0,0,.6)}
+body.diashow #dsRadio{display:flex}
+body.ds-ohne-radio #dsRadio{display:none!important}
+.dsr-play{flex:none;width:40px;height:40px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;color:#0c0f16;background:linear-gradient(180deg,#fff,#dbe1ec)}
+.dsr-play svg{width:17px;height:17px;fill:currentColor}
+.dsr-text{min-width:0;padding-right:2px}
+.dsr-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+.dsr-status{font-size:12px;color:var(--soluk)}
+#dsRadio.spielt .dsr-status{color:var(--vurgu)}
+.dsr-weiter{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:var(--metin);display:flex;align-items:center;justify-content:center}
+.dsr-weiter svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 body.diashow #pano [data-w]:not(.cerceve){display:none!important}
 html body.diashow .sol,html body.diashow .sag{display:block!important}
 body.diashow .cerceve{display:block;position:fixed;inset:0;z-index:-1;border:0;border-radius:0;box-shadow:none;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
@@ -245,6 +261,11 @@ body.sadeceFoto #tamFoto{opacity:1}
     <div class="ds-tage" id="dsTage"></div>
   </div>
 </div>
+<div id="dsRadio">
+  <button class="dsr-play" id="dsRPlay" type="button" aria-label="Radio abspielen"></button>
+  <div class="dsr-text"><div class="dsr-name" id="dsRName">Radio</div><div class="dsr-status" id="dsRStatus"></div></div>
+  <button class="dsr-weiter" id="dsRWeiter" type="button" aria-label="Nächster Sender"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+</div>
 <audio id="audio" preload="none" playsinline></audio>
 <div id="durum"></div>
 
@@ -267,7 +288,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 (function () {
   'use strict';
 
-  var VERSION = '9';   // bei jeder Änderung zusammen mit version.json erhöhen
+  var VERSION = '10';   // bei jeder Änderung zusammen mit version.json erhöhen
   var AYAR = { veriDk: 2, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
   var GUN = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   var GUN_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -369,7 +390,10 @@ body.sadeceFoto #tamFoto{opacity:1}
     var dia = veri.modus === 'diashow';
     if (dia !== b.contains('diashow')) { b.toggle('diashow', dia); b.remove('sadeceFoto'); fotoAnahtar = null; fotolarHazirla(); }
     ['kalender', 'wetter', 'fotos', 'countdown', 'radio'].forEach(function (n) { b.toggle('ohne-' + n, a[n] === false); });
-    if (a.radio === false && radioAn) radioStop();
+    var o = veri.optionen || {};
+    ['uhr', 'wetter', 'tage', 'radio'].forEach(function (n) { b.toggle('ds-ohne-' + n, o['ds_' + n] === false); });
+    var radioSichtbar = dia ? o.ds_radio !== false : a.radio !== false;
+    if (!radioSichtbar && radioAn) radioStop();
     radioZeigen();
     var l = veri.layout;
     if (l && l.links && l.rechts) {
@@ -644,13 +668,14 @@ body.sadeceFoto #tamFoto{opacity:1}
   var STOP = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>';
   var audio = $('audio'), radioAn = false, radioNeu = null, radioVersuch = 0, radioIdx = LS.get('radioIdx') || 0;
   function sender() { return veri.radio && veri.radio.length ? veri.radio : RADIO_STANDARD; }
-  function radioStatus(t) { $('rStatus').textContent = t; }
+  function radioStatus(t) { $('rStatus').textContent = t; $('dsRStatus').textContent = t; }
   function radioZeigen() {
     var l = sender();
     if (radioIdx >= l.length) radioIdx = 0;
-    $('rName').textContent = l[radioIdx].name;
-    $('rPlay').innerHTML = radioAn ? STOP : PLAY;
+    $('rName').textContent = l[radioIdx].name; $('dsRName').textContent = l[radioIdx].name;
+    $('rPlay').innerHTML = radioAn ? STOP : PLAY; $('dsRPlay').innerHTML = radioAn ? STOP : PLAY;
     $('rPlay').setAttribute('aria-label', radioAn ? 'Radio stoppen' : 'Radio abspielen');
+    $('dsRPlay').setAttribute('aria-label', radioAn ? 'Radio stoppen' : 'Radio abspielen');
     if (!radioAn) radioStatus(l.length > 1 ? 'Sender ' + (radioIdx + 1) + ' von ' + l.length : 'Zum Abspielen tippen');
   }
   function radioStart() {
@@ -662,29 +687,33 @@ body.sadeceFoto #tamFoto{opacity:1}
     // Nur der letzte Versuch zählt; ein Senderwechsel bricht den alten play() mit AbortError ab.
     if (p && p.catch) p.catch(function (e) {
       if (versuch !== radioVersuch || (e && e.name === 'AbortError')) return;
-      radioAn = false; radioZeigen(); radioStatus('Zum Abspielen tippen'); $('radio').classList.remove('spielt');
+      radioAn = false; radioZeigen(); radioStatus('Zum Abspielen tippen'); spieltSetzen(false);
     });
   }
   function radioStop() {
     clearTimeout(radioNeu); radioVersuch++;
     radioAn = false; audio.pause(); audio.removeAttribute('src'); audio.load();
-    $('radio').classList.remove('spielt'); radioZeigen();
+    spieltSetzen(false); radioZeigen();
   }
   function radioWechsel(r) {
     var l = sender(); radioIdx = (radioIdx + r + l.length) % l.length; LS.set('radioIdx', radioIdx);
     if (radioAn) radioStart(); else radioZeigen();
   }
-  audio.addEventListener('playing', function () { $('radio').classList.add('spielt'); radioStatus('Live'); });
+  audio.addEventListener('playing', function () { spieltSetzen(true); radioStatus('Live'); });
   audio.addEventListener('waiting', function () { if (radioAn) radioStatus('Verbinde …'); });
   audio.addEventListener('error', function () {
     if (!radioAn) return;
-    $('radio').classList.remove('spielt'); radioStatus('Unterbrochen, neuer Versuch …');
+    spieltSetzen(false); radioStatus('Unterbrochen, neuer Versuch …');
     clearTimeout(radioNeu); radioNeu = setTimeout(radioStart, 5000);
   });
   $('rPlay').addEventListener('click', function () { radioAn ? radioStop() : radioStart(); });
+  $('dsRPlay').addEventListener('click', function () { radioAn ? radioStop() : radioStart(); });
+  $('dsRWeiter').addEventListener('click', function () { radioWechsel(1); });
+  $('dsRadio').addEventListener('click', function (e) { if (!document.body.classList.contains('gece')) e.stopPropagation(); });
   $('rZurueck').addEventListener('click', function () { radioWechsel(-1); });
   $('rWeiter').addEventListener('click', function () { radioWechsel(1); });
   // Tippen auf das Radio soll nicht den Foto-Modus auslösen.
+  function spieltSetzen(an) { $('radio').classList.toggle('spielt', an); $('dsRadio').classList.toggle('spielt', an); }
   $('radio').addEventListener('click', function (e) { if (!document.body.classList.contains('gece')) e.stopPropagation(); });
 
   /* ---------- Dokunma: gece uyandır, gündüz sadece foto ---------- */

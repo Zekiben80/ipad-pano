@@ -136,7 +136,12 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     </section>
 
     <section class="cam" style="margin-bottom:16px">
-      <h2>Auf dem Pano anzeigen</h2>
+      <h2>In der Diashow anzeigen</h2>
+      <div id="dsSchalter"></div>
+    </section>
+
+    <section class="cam" style="margin-bottom:16px">
+      <h2>Standard-Ansicht: anzeigen</h2>
       <div id="schalter"></div>
     </section>
 
@@ -317,10 +322,28 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
       var an = b.getAttribute('data-m') === (daten.modus || 'standard');
       b.classList.toggle('aktiv', an); b.setAttribute('aria-pressed', an);
     });
+    var o = daten.optionen || {};
+    $('dsSchalter').innerHTML = DS_TEILE.map(function (t) {
+      return '<div class="zeile"><div class="ad">' + t.ad + '<small>' + t.info + '</small></div>' +
+        '<label class="sw"><input type="checkbox" data-o="' + t.n + '"' + (o[t.n] !== false ? ' checked' : '') + ' aria-label="' + t.ad + ' in der Diashow"><span></span></label></div>';
+    }).join('');
     anordnungZeigen();
     senderZeigen();
     galerieZeigen();
   }
+
+  var DS_TEILE = [
+    { n: 'ds_uhr', ad: 'Uhr & Datum', info: 'Unten links' },
+    { n: 'ds_wetter', ad: 'Temperatur', info: 'Unten rechts' },
+    { n: 'ds_tage', ad: '5-Tage-Vorhersage', info: 'Unter der Temperatur' },
+    { n: 'ds_radio', ad: 'Radio', info: 'Kleine Leiste oben rechts' }
+  ];
+  $('dsSchalter').addEventListener('change', function (e) {
+    var n = e.target.getAttribute('data-o'); if (!n) return;
+    var opt = {}; opt[n] = e.target.checked;
+    daten.optionen = daten.optionen || {}; daten.optionen[n] = e.target.checked;
+    senden({ optionen: opt }, e.target.checked ? 'In der Diashow sichtbar' : 'In der Diashow ausgeblendet');
+  });
 
   $('modi').addEventListener('click', function (e) {
     var b = e.target.closest('.modus'); if (!b || laeuft) return;
