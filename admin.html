@@ -63,6 +63,19 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .fuss{text-align:center;color:var(--cok-soluk);font-size:13px;line-height:1.5}
 .fuss a{color:var(--soluk)}
 
+/* Anordnung */
+.spalten{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.spalte-titel{font-size:12px;color:var(--cok-soluk);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.spalte-box{border-radius:16px;padding:6px;background:rgba(0,0,0,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);min-height:60px}
+.w{border-radius:12px;padding:9px 8px 8px;margin-bottom:6px;background:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+.w:last-child{margin-bottom:0}
+.w b{display:block;font-size:14px;font-weight:600;margin:0 2px 7px}
+.w.aus b{color:var(--cok-soluk);text-decoration:line-through}
+.w .knoepfe{display:flex;gap:5px}
+.w button{flex:1;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:var(--metin);font-size:15px}
+.w button:disabled{opacity:.25}
+.hinweis{font-size:12px;color:var(--cok-soluk);margin-top:10px;line-height:1.4}
+
 /* Fotos */
 .galerie{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .bild{position:relative;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.07) center/cover no-repeat;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
@@ -84,6 +97,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
   <div>
     <h1>Pano Admin</h1>
     <p class="unter" id="status">Wird geladen …</p>
+    <button class="dugme" type="button" id="nochmal" hidden>Erneut versuchen</button>
   </div>
 
   <form class="cam" id="einrichten" hidden autocomplete="off">
@@ -99,6 +113,12 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     <section class="cam" style="margin-bottom:16px">
       <h2>Auf dem Pano anzeigen</h2>
       <div id="schalter"></div>
+    </section>
+
+    <section class="cam" style="margin-bottom:16px">
+      <h2>Anordnung</h2>
+      <div id="anordnung"></div>
+      <p class="hinweis">Hochkant zeigt das iPad alles untereinander, Fotos dann als Hintergrund.</p>
     </section>
 
     <section class="cam" style="margin-bottom:16px">
@@ -134,7 +154,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     </section>
   </div>
 
-  <p class="fuss">Änderungen erscheinen auf dem iPad innerhalb von 2 Minuten.<br><a href="./">Pano öffnen</a></p>
+  <p class="fuss">Änderungen erscheinen auf dem iPad innerhalb von 2 Minuten.<br><a href="./">Pano öffnen</a> · <a href="#" id="zugang">Zugang ändern</a></p>
 </main>
 <div id="toast"></div>
 
@@ -159,7 +179,8 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
   var q = new URLSearchParams(location.search);
   if (q.get('api')) LS.set('api', q.get('api'));
   if (q.get('k')) LS.set('k', q.get('k'));
-  var API = LS.get('api'), KEY = LS.get('k');
+  var STANDARD_API = 'https://script.google.com/macros/s/AKfycbwcjpXKheeCJIieBHme-CYCRY0BzdEfKUcxqa97zgv4y72mJRwa99DJJK_PSiNRoGTI/exec';
+  var API = LS.get('api') || STANDARD_API, KEY = LS.get('k');
   var daten = null, laeuft = false;
 
   var toastZ;
@@ -168,17 +189,25 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     clearTimeout(toastZ); toastZ = setTimeout(function () { t.className = ''; }, 2200);
   }
 
-  function laden() {
-    return fetch(API + '?k=' + encodeURIComponent(KEY)).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.hata) throw new Error(d.hata === 'yetki' ? 'Token falsch' : d.hata);
-      daten = d; zeigen();
-      $('status').textContent = 'Verbunden';
-    });
+  function laden(versuch) {
+    versuch = versuch || 1;
+    $('status').textContent = versuch > 1 ? 'Verbinde … (Versuch ' + versuch + ')' : 'Wird geladen …';
+    return fetch(API + '?k=' + encodeURIComponent(KEY), { cache: 'no-store', credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.hata) { var e = new Error(d.hata === 'yetki' ? 'Token falsch' : d.hata); e.token = d.hata === 'yetki'; throw e; }
+        daten = d; zeigen();
+        $('status').textContent = 'Verbunden';
+      })
+      .catch(function (e) {
+        if (!e.token && versuch < 3) return new Promise(function (ok) { setTimeout(ok, 1500 * versuch); }).then(function () { return laden(versuch + 1); });
+        throw e;
+      });
   }
 
   function post(body) {
     body.k = KEY;
-    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
+    return fetch(API, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.hata) throw new Error(d.hata === 'yetki' ? 'Token falsch' : d.hata);
@@ -220,8 +249,43 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     }).join('') : '<div class="leer">Noch keine Countdowns</div>';
 
     if (document.activeElement !== $('stadt')) $('stadt').value = daten.sehir || '';
+    anordnungZeigen();
     galerieZeigen();
   }
+
+  /* ---------- Anordnung ---------- */
+  var W_NAMEN = { uhr: 'Uhr & Datum', countdown: 'Countdowns', fotos: 'Fotos', wetter: 'Wetter', kalender: 'Kalender' };
+  function layoutHolen() {
+    var l = daten.layout || { links: ['uhr', 'countdown', 'fotos'], rechts: ['wetter', 'kalender'] };
+    return { links: l.links.slice(), rechts: l.rechts.slice() };
+  }
+  function anordnungZeigen() {
+    var l = layoutHolen(), a = daten.anzeige || {};
+    function spalte(seite, titel) {
+      var liste = l[seite];
+      return '<div><div class="spalte-titel">' + titel + '</div><div class="spalte-box">' + liste.map(function (w, i) {
+        var aus = w !== 'uhr' && a[w] === false;
+        var pfeil = seite === 'links' ? '→' : '←';
+        return '<div class="w' + (aus ? ' aus' : '') + '"><b>' + W_NAMEN[w] + '</b><div class="knoepfe">' +
+          '<button type="button" data-w="' + w + '" data-a="hoch"' + (i === 0 ? ' disabled' : '') + ' aria-label="' + W_NAMEN[w] + ' nach oben">↑</button>' +
+          '<button type="button" data-w="' + w + '" data-a="runter"' + (i === liste.length - 1 ? ' disabled' : '') + ' aria-label="' + W_NAMEN[w] + ' nach unten">↓</button>' +
+          '<button type="button" data-w="' + w + '" data-a="seite" aria-label="' + W_NAMEN[w] + ' in die andere Spalte">' + pfeil + '</button>' +
+          '</div></div>';
+      }).join('') + '</div></div>';
+    }
+    $('anordnung').innerHTML = '<div class="spalten">' + spalte('links', 'Links') + spalte('rechts', 'Rechts') + '</div>';
+  }
+  $('anordnung').addEventListener('click', function (e) {
+    var btn = e.target.closest('button'); if (!btn || laeuft) return;
+    var w = btn.getAttribute('data-w'), aktion = btn.getAttribute('data-a'), l = layoutHolen();
+    var seite = l.links.indexOf(w) > -1 ? 'links' : 'rechts', liste = l[seite], i = liste.indexOf(w);
+    if (aktion === 'hoch' && i > 0) { liste.splice(i, 1); liste.splice(i - 1, 0, w); }
+    else if (aktion === 'runter' && i < liste.length - 1) { liste.splice(i, 1); liste.splice(i + 1, 0, w); }
+    else if (aktion === 'seite') { liste.splice(i, 1); l[seite === 'links' ? 'rechts' : 'links'].push(w); }
+    else return;
+    daten.layout = l; anordnungZeigen();
+    senden({ layout: l }, 'Anordnung gespeichert');
+  });
 
   /* ---------- Fotos ---------- */
   var vorschau = {}, vorschauLaeuft = false;
@@ -325,11 +389,17 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
   });
 
   $('eApi').value = API || ''; $('eKey').value = KEY || '';
-  if (!API || !KEY) { $('einrichten').hidden = false; $('status').textContent = 'Einmalig einrichten'; return; }
-  laden().then(function () { $('inhalt').hidden = false; }).catch(function (e) {
-    $('status').textContent = 'Keine Verbindung: ' + e.message;
-    $('einrichten').hidden = false;
-  });
+  $('zugang').addEventListener('click', function (e) { e.preventDefault(); $('einrichten').hidden = !$('einrichten').hidden; });
+  $('nochmal').addEventListener('click', start);
+  function start() {
+    $('nochmal').hidden = true;
+    laden().then(function () { $('inhalt').hidden = false; $('einrichten').hidden = true; }).catch(function (e) {
+      $('status').textContent = e.token ? 'Token falsch. Bitte neu eingeben.' : 'Keine Verbindung (' + e.message + ')';
+      if (e.token) $('einrichten').hidden = false; else $('nochmal').hidden = false;
+    });
+  }
+  if (!KEY) { $('einrichten').hidden = false; $('status').textContent = 'Einmalig den Token eingeben'; return; }
+  start();
 })();
 </script>
 </body>

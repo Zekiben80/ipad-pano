@@ -29,10 +29,9 @@ ul{list-style:none}
 body.gece #karart{background:rgba(0,0,0,.82)}
 body.gece .foto{opacity:0!important}
 /* Bereiche ein-/ausblenden (Admin-Seite) */
-body.ohne-wetter .hava,body.ohne-kalender .takvim,body.ohne-countdown .sayimlar,body.ohne-rechts .sag{display:none!important}
-body.ohne-rechts #pano{grid-template-columns:1fr}
-body.ohne-kalender .sag{justify-content:center}
-body:not(.fotoVar) .sol{justify-content:center}
+body.ohne-wetter .hava,body.ohne-kalender .takvim,body.ohne-countdown .sayimlar,body.links-leer .sol,body.rechts-leer .sag{display:none!important}
+body.links-leer #pano,body.rechts-leer #pano{grid-template-columns:1fr}
+.sol.mitte,.sag.mitte{justify-content:center}
 
 /* Foto-Rahmen */
 .cerceve{display:none;flex:1;min-height:0;padding:0}
@@ -153,15 +152,15 @@ body.sadeceFoto #tamFoto{opacity:1}
 
 <main id="pano">
   <section class="sol">
-    <div>
+    <div data-w="uhr">
       <div class="saat" id="saat">--:--</div>
       <div class="tarih" id="tarih"></div>
     </div>
-    <div class="sayimlar" id="sayimlar"></div>
-    <div class="cam cerceve" id="cerceve"><div class="foto" id="fA"></div><div class="foto" id="fB"></div></div>
+    <div class="sayimlar" id="sayimlar" data-w="countdown"></div>
+    <div class="cam cerceve" id="cerceve" data-w="fotos"><div class="foto" id="fA"></div><div class="foto" id="fB"></div></div>
   </section>
   <section class="sag">
-    <div class="cam hava">
+    <div class="cam hava" data-w="wetter">
       <div class="hava-ust">
         <div class="ikon" id="hIkon"></div>
         <div><div class="derece" id="hDerece">--°</div><div class="durum" id="hDurum">Wetter wird geladen</div></div>
@@ -169,7 +168,7 @@ body.sadeceFoto #tamFoto{opacity:1}
       </div>
       <div class="gunler" id="hGunler"></div>
     </div>
-    <div class="cam takvim">
+    <div class="cam takvim" data-w="kalender">
       <div class="ay-ust"><div class="baslik" id="ayAdi">Kalender</div></div>
       <div class="ay" id="ay"></div>
       <ul class="liste" id="etkinlikler"></ul>
@@ -217,7 +216,8 @@ body.sadeceFoto #tamFoto{opacity:1}
   if (q.get('api')) LS.set('api', q.get('api'));
   if (q.get('k')) LS.set('k', q.get('k'));
   var DEMO = q.has('demo') || LS.get('demo') === true;
-  var API = LS.get('api'), KEY = LS.get('k');
+  var STANDARD_API = 'https://script.google.com/macros/s/AKfycbwcjpXKheeCJIieBHme-CYCRY0BzdEfKUcxqa97zgv4y72mJRwa99DJJK_PSiNRoGTI/exec';
+  var API = LS.get('api') || STANDARD_API, KEY = LS.get('k');
 
   function getJSON(url, sn) {
     var ctrl = window.AbortController ? new AbortController() : null;
@@ -271,12 +271,37 @@ body.sadeceFoto #tamFoto{opacity:1}
 
   function durum(m, hata) { var el = $('durum'); el.textContent = m; el.className = hata ? 'hata' : ''; }
 
-  function ciz() { anzeigeAnwenden(); takvimCiz(); etkinlikCiz(); sayimCiz(); }
+  function ciz() { takvimCiz(); etkinlikCiz(); sayimCiz(); anzeigeAnwenden(); }
 
   function anzeigeAnwenden() {
     var a = veri.anzeige || {}, b = document.body.classList;
     ['kalender', 'wetter', 'fotos', 'countdown'].forEach(function (n) { b.toggle('ohne-' + n, a[n] === false); });
-    b.toggle('ohne-rechts', a.kalender === false && a.wetter === false);
+    var l = veri.layout;
+    if (l && l.links && l.rechts) {
+      [[l.links, '.sol'], [l.rechts, '.sag']].forEach(function (p) {
+        var spalte = document.querySelector(p[1]);
+        p[0].forEach(function (w) { var el = document.querySelector('[data-w="' + w + '"]'); if (el) spalte.appendChild(el); });
+      });
+    }
+    spaltenPruefen();
+  }
+
+  // Leere Spalten ausblenden; Spalten ohne dehnbaren Bereich vertikal zentrieren.
+  function spaltenPruefen() {
+    var a = veri.anzeige || {}, b = document.body.classList;
+    function sichtbar(w) {
+      if (w === 'uhr') return true;
+      if (w === 'fotos') return b.contains('fotoVar');
+      if (w === 'countdown') return a.countdown !== false && $('sayimlar').children.length > 0;
+      return a[w] !== false;
+    }
+    [['.sol', 'links-leer'], ['.sag', 'rechts-leer']].forEach(function (p) {
+      var spalte = document.querySelector(p[0]);
+      var ws = Array.prototype.map.call(spalte.querySelectorAll('[data-w]'), function (el) { return el.getAttribute('data-w'); });
+      var sichtbare = ws.filter(sichtbar);
+      b.toggle(p[1], sichtbare.length === 0);
+      spalte.classList.toggle('mitte', !sichtbare.some(function (w) { return w === 'fotos' || w === 'kalender'; }));
+    });
   }
 
   function etkinlikBaslangic(e) { return e.g ? yerelTarih(e.b) : new Date(e.b); }
@@ -413,6 +438,7 @@ body.sadeceFoto #tamFoto{opacity:1}
     for (var i = list.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = list[i]; list[i] = list[j]; list[j] = t; }
     fotoSira = list; fotoIdx = -1;
     document.body.classList.toggle('fotoVar', list.length > 0);
+    spaltenPruefen();
     clearInterval(fotoZamanlayici);
     if (!list.length) return;
     sonrakiFoto();
@@ -461,7 +487,9 @@ body.sadeceFoto #tamFoto{opacity:1}
     var s = new Date();
     function t(gun, sa, dk) { var d = new Date(s.getFullYear(), s.getMonth(), s.getDate() + gun, sa, dk); return d.toISOString(); }
     function g(gun) { var d = new Date(s.getFullYear(), s.getMonth(), s.getDate() + gun); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+    var lay = null; try { lay = JSON.parse(q.get('lay')); } catch (e) {}
     return {
+      layout: lay || undefined,
       sehir: 'Köln',
       etkinlikler: [
         { t: 'Sellbird Teammeeting', g: false, b: t(0, s.getHours(), 0), s: t(0, s.getHours() + 1, 0), r: '#7aa2ff' },

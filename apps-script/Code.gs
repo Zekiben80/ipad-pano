@@ -49,6 +49,29 @@ function doGet(e) {
 }
 
 var BEREICHE = ['kalender', 'wetter', 'fotos', 'countdown'];
+var WIDGETS = ['uhr', 'countdown', 'fotos', 'wetter', 'kalender'];
+var LAYOUT_STANDARD = { links: ['uhr', 'countdown', 'fotos'], rechts: ['wetter', 'kalender'] };
+
+/** Anordnung prüfen: nur bekannte Bereiche, jeder genau einmal. */
+function layoutPruefen(l) {
+  var gesehen = {};
+  function filtern(a) {
+    return (Array.isArray(a) ? a : []).filter(function (w) {
+      if (WIDGETS.indexOf(w) === -1 || gesehen[w]) return false;
+      gesehen[w] = true; return true;
+    });
+  }
+  var r = { links: filtern(l && l.links), rechts: filtern(l && l.rechts) };
+  WIDGETS.forEach(function (w) {
+    if (!gesehen[w]) (LAYOUT_STANDARD.links.indexOf(w) > -1 ? r.links : r.rechts).push(w);
+  });
+  return r;
+}
+
+function layoutLesen(einst) {
+  try { if (einst.layout) return layoutPruefen(JSON.parse(einst.layout)); } catch (e) {}
+  return LAYOUT_STANDARD;
+}
 
 /** Admin-Seite: Änderungen speichern. Body (text/plain): {"k":TOKEN, "anzeige":{...}, "stadt":"...", "countdowns":[...]} */
 function doPost(e) {
@@ -64,6 +87,7 @@ function doPost(e) {
         if (n in body.anzeige) einstellungSetzen('zeige_' + n, body.anzeige[n] === true, 'Auf dem Pano anzeigen (Admin-Seite).');
       });
     }
+    if (body.layout) einstellungSetzen('layout', JSON.stringify(layoutPruefen(body.layout)), 'Anordnung (Admin-Seite).');
     if (typeof body.stadt === 'string') einstellungSetzen('stadt', body.stadt.trim().slice(0, 80));
     if (Array.isArray(body.countdowns)) countdownsSchreiben(body.countdowns);
     if (body.fotoNeu) fotoSpeichern(body.fotoNeu, einst);
@@ -127,6 +151,7 @@ function daten(einst) {
   return {
     zaman: new Date().toISOString(),
     anzeige: anzeige,
+    layout: layoutLesen(einst),
     sehir: einst.stadt || '',
     etkinlikler: termine(einst),
     notlar: notizen(),
