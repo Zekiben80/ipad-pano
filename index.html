@@ -69,7 +69,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 .cip span{font-size:15px;font-weight:500;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Hava */
-.hava{margin-top:auto}
+.hava{flex:none}
 .hava-ust{display:flex;align-items:center;gap:18px}
 .ikon svg{display:block;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .hava-ust .ikon svg{width:74px;height:74px}
@@ -87,7 +87,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 .gun .yagis{font-size:12px;color:#9fd0ff;margin-top:2px;min-height:15px}
 
 /* Takvim */
-.takvim{flex:2.6;display:flex;flex-direction:column;min-height:0}
+.takvim{flex:1;display:flex;flex-direction:column;min-height:0}
 .ay-ust{display:flex;justify-content:space-between;align-items:baseline}
 .ay{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:12px}
 .ay .gb{color:var(--cok-soluk);font-weight:600;font-size:11px;padding-bottom:4px}
@@ -137,9 +137,6 @@ body.sadeceFoto #tamFoto{opacity:1}
   .cerceve::before{display:none}
   .cerceve::after{box-shadow:none;background:rgba(4,6,10,.5)}
   .saat{font-size:min(30vw,190px)}
-  .hava{margin-top:6px}
-  .sag{flex-direction:row}
-  .sag > .cam{flex:1}
 }
 </style>
 </head>
@@ -156,6 +153,8 @@ body.sadeceFoto #tamFoto{opacity:1}
     </div>
     <div class="sayimlar" id="sayimlar"></div>
     <div class="cam cerceve" id="cerceve"><div class="foto" id="fA"></div><div class="foto" id="fB"></div></div>
+  </section>
+  <section class="sag">
     <div class="cam hava">
       <div class="hava-ust">
         <div class="ikon" id="hIkon"></div>
@@ -164,16 +163,10 @@ body.sadeceFoto #tamFoto{opacity:1}
       </div>
       <div class="gunler" id="hGunler"></div>
     </div>
-  </section>
-  <section class="sag">
     <div class="cam takvim">
       <div class="ay-ust"><div class="baslik" id="ayAdi">Kalender</div></div>
       <div class="ay" id="ay"></div>
       <ul class="liste" id="etkinlikler"></ul>
-    </div>
-    <div class="cam notlar">
-      <div class="baslik">Notizen</div>
-      <ul id="notlar"></ul>
     </div>
   </section>
 </main>
@@ -272,7 +265,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 
   function durum(m, hata) { var el = $('durum'); el.textContent = m; el.className = hata ? 'hata' : ''; }
 
-  function ciz() { takvimCiz(); etkinlikCiz(); notCiz(); sayimCiz(); }
+  function ciz() { takvimCiz(); etkinlikCiz(); sayimCiz(); }
 
   function etkinlikBaslangic(e) { return e.g ? yerelTarih(e.b) : new Date(e.b); }
   function etkinlikBitis(e) { return e.g ? yerelTarih(e.s) : new Date(e.s); }
@@ -311,11 +304,6 @@ body.sadeceFoto #tamFoto{opacity:1}
       return '<li class="etk' + (devam ? ' simdi' : '') + '"><span class="nokta" style="background:' + esc(e.r || '#8ab4ff') + ';color:' + esc(e.r || '#8ab4ff') + '"></span>' +
         '<div><div class="etk-ad">' + esc(e.t) + '</div><div class="etk-zaman">' + esc(z) + '</div></div></li>';
     }).join('');
-  }
-
-  function notCiz() {
-    var n = (veri.notlar || []).slice(0, 10);
-    $('notlar').innerHTML = n.length ? n.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') : '<li class="bos" style="padding-left:0">Keine Notizen</li>';
   }
 
   function sayimCiz() {

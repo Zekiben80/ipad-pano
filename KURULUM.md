@@ -36,8 +36,7 @@ Kodu değiştirirsen: Dağıt → Dağıtımları yönet → düzenle → Sürü
 
 ## Kullanım
 
-- Notlar / geri sayım: Google Tablosunu telefondan veya PC'den düzenle. Pano 5 dakikada bir yenilenir.
-  - Notizen: "Erledigt" kutusunu işaretlersen panodan kalkar.
+- Geri sayım: Google Tablosunu (Countdown) telefondan veya PC'den düzenle. Pano 5 dakikada bir yenilenir.
   - Countdown: "Jährlich" işaretliyse (doğum günü gibi) her yıl tekrarlar.
 - Fotoğraf: Drive klasörüne ekle. Liste 10 dakikada bir güncellenir, fotoğraf dakikada bir değişir.
 - Ekrana dokun: 30 sn yalnızca fotoğraf. Gece (23:00–06:00) ekran kararır, dokununca 1 dk açılır.
