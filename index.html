@@ -22,7 +22,11 @@ ul{list-style:none}
 
 /* Arka plan + fotoğraflar */
 #bg{position:fixed;inset:0;background:radial-gradient(120% 90% at 15% 10%,#2b3754 0%,#121826 48%,#07090d 100%)}
-.foto{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 2.4s ease}
+/* Foto ganz zeigen (nichts abschneiden); freie Fläche mit unscharfer Kopie desselben Fotos füllen */
+.foto{position:absolute;inset:0;overflow:hidden;background-size:0 0;background-repeat:no-repeat;opacity:0;transition:opacity 2.4s ease}
+.foto::before,.foto::after{content:"";position:absolute;background-image:inherit;background-repeat:no-repeat;background-position:center}
+.foto::before{inset:-40px;background-size:cover;filter:blur(28px) brightness(.5) saturate(1.15)}
+.foto::after{inset:0;background-size:contain}
 .foto.acik{opacity:1}
 #karart{position:fixed;inset:0;transition:opacity 1s,background 1s;
   background:linear-gradient(100deg,rgba(4,6,10,.66) 0%,rgba(4,6,10,.30) 52%,rgba(4,6,10,.58) 100%)}
@@ -84,7 +88,7 @@ body.fotoVar .cerceve{display:block}
 .cerceve .foto{z-index:1}
 .cerceve::after{content:"";position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 0 0 1px rgba(255,255,255,.12),inset 0 -40px 60px -30px rgba(0,0,0,.35)}
-#tamFoto{position:fixed;inset:0;z-index:8;background:#000 center/cover no-repeat;opacity:0;pointer-events:none;transition:opacity .8s}
+#tamFoto{position:fixed;inset:0;z-index:8;background:#000 center/contain no-repeat;opacity:0;pointer-events:none;transition:opacity .8s}
 body.sadeceFoto #tamFoto{opacity:1}
 
 /* Yerleşim */
@@ -704,7 +708,7 @@ body.sadeceFoto #tamFoto{opacity:1}
       ],
       notlar: ['Versandetiketten drucken', 'Rechnungen prüfen', 'Einkaufen: Milch, Brot', 'iPad-Ladekabel kaufen'],
       sayimlar: [{ ad: 'Silvester', tarih: s.getFullYear() + '-12-31', yillik: true }, { ad: 'Urlaub', tarih: g(3), yillik: false }, { ad: 'Geburtstag', tarih: g(19), yillik: true }],
-      fotolar: ['https://picsum.photos/id/1015/1200/800', 'https://picsum.photos/id/1043/1200/800', 'https://picsum.photos/id/1067/1200/800']
+      fotolar: ['https://picsum.photos/id/1027/720/1280', 'https://picsum.photos/id/1015/1200/800', 'https://picsum.photos/id/1043/1200/800', 'https://picsum.photos/id/1067/1200/800']
     };
   }
 
