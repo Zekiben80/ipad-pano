@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pano">
+<meta name="theme-color" content="#07090d">
+<meta name="robots" content="noindex">
+<title>Pano</title>
+<style>
+:root{
+  --metin:#f5f7fb; --soluk:rgba(245,247,251,.64); --cok-soluk:rgba(245,247,251,.38);
+  --vurgu:#ffd27a; --bosluk:22px; --yaricap:28px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#07090d;color:var(--metin);overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+ul{list-style:none}
+
+/* Arka plan + fotoğraflar */
+#bg{position:fixed;inset:0;background:radial-gradient(120% 90% at 15% 10%,#2b3754 0%,#121826 48%,#07090d 100%)}
+.foto{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 2.4s ease}
+.foto.acik{opacity:1}
+#karart{position:fixed;inset:0;transition:opacity 1s,background 1s;
+  background:linear-gradient(100deg,rgba(4,6,10,.66) 0%,rgba(4,6,10,.30) 52%,rgba(4,6,10,.58) 100%)}
+body.gece #karart{background:rgba(0,0,0,.82)}
+body.gece .foto{opacity:0!important}
+body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
+
+/* Yerleşim */
+#pano{position:fixed;inset:0;display:grid;grid-template-columns:1.22fr 1fr;gap:var(--bosluk);
+  padding:calc(var(--bosluk) + env(safe-area-inset-top)) calc(var(--bosluk) + env(safe-area-inset-right)) calc(var(--bosluk) + env(safe-area-inset-bottom)) calc(var(--bosluk) + env(safe-area-inset-left));
+  transition:transform 4s ease,opacity .8s}
+.sol{display:flex;flex-direction:column;gap:18px;min-height:0}
+.sag{display:flex;flex-direction:column;gap:var(--bosluk);min-height:0}
+
+/* 3D cam */
+.cam{position:relative;border-radius:var(--yaricap);padding:20px 22px;overflow:hidden;
+  background:linear-gradient(155deg,rgba(255,255,255,.17) 0%,rgba(255,255,255,.06) 42%,rgba(255,255,255,.09) 100%);
+  -webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%);
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -1px 0 rgba(0,0,0,.28),0 24px 48px -12px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.25)}
+.cam::before{content:"";position:absolute;left:0;right:0;top:0;height:46%;pointer-events:none;border-radius:var(--yaricap) var(--yaricap) 0 0;
+  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,0))}
+.baslik{font-size:13px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--soluk);margin-bottom:12px}
+
+/* Saat */
+.saat{font-size:min(17.5vw,176px);font-weight:200;line-height:.86;letter-spacing:-.045em;font-variant-numeric:tabular-nums;
+  text-shadow:0 6px 34px rgba(0,0,0,.4);margin-left:-6px}
+.tarih{font-size:27px;font-weight:500;margin-top:10px;text-shadow:0 2px 14px rgba(0,0,0,.45)}
+.tarih span{color:var(--soluk);font-weight:400}
+
+/* Geri sayım */
+.sayimlar{display:flex;gap:12px;flex-wrap:wrap}
+.sayimlar:empty{display:none}
+.cip{padding:11px 16px 11px 14px;border-radius:20px;display:flex;align-items:baseline;gap:8px}
+.cip b{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--vurgu)}
+.cip i{font-style:normal;font-size:13px;color:var(--soluk)}
+.cip span{font-size:15px;font-weight:500;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Hava */
+.hava{margin-top:auto}
+.hava-ust{display:flex;align-items:center;gap:18px}
+.ikon svg{display:block;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.hava-ust .ikon svg{width:74px;height:74px}
+.derece{font-size:62px;font-weight:300;line-height:1;letter-spacing:-.03em}
+.durum{font-size:16px;color:var(--soluk);margin-top:4px}
+.hava-yan{margin-left:auto;text-align:right;font-size:14px;line-height:1.7;color:var(--soluk)}
+.hava-yan b{color:var(--metin);font-weight:500}
+.gunler{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12)}
+.gun{text-align:center;font-size:14px}
+.gun .ikon{display:flex;justify-content:center;margin:6px 0}
+.gun .ikon svg{width:30px;height:30px}
+.gun .ad{color:var(--soluk);font-weight:600}
+.gun .mm{font-variant-numeric:tabular-nums}
+.gun .mm em{font-style:normal;color:var(--cok-soluk);margin-left:5px}
+.gun .yagis{font-size:12px;color:#9fd0ff;margin-top:2px;min-height:15px}
+
+/* Takvim */
+.takvim{flex:2.6;display:flex;flex-direction:column;min-height:0}
+.ay-ust{display:flex;justify-content:space-between;align-items:baseline}
+.ay{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:12px}
+.ay .gb{color:var(--cok-soluk);font-weight:600;font-size:11px;padding-bottom:4px}
+.ay .g{position:relative;height:25px;line-height:25px;border-radius:9px}
+.ay .g.diger{color:var(--cok-soluk)}
+.ay .g.bugun{background:var(--metin);color:#0c0f16;font-weight:700}
+.ay .g.var::after{content:"";position:absolute;left:50%;bottom:2px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--vurgu)}
+.ay .g.bugun.var::after{background:#0c0f16}
+.liste{overflow:hidden;flex:1;-webkit-mask-image:linear-gradient(180deg,#000 82%,transparent);mask-image:linear-gradient(180deg,#000 82%,transparent)}
+.etk{display:flex;gap:11px;align-items:flex-start;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)}
+.etk:first-child{border-top:0}
+.nokta{flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px;box-shadow:0 0 8px currentColor}
+.etk-ad{font-size:16px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.etk-zaman{font-size:13px;color:var(--soluk);margin-top:1px}
+.etk.simdi .etk-zaman{color:var(--vurgu)}
+.etk > div{min-width:0}
+.bos{color:var(--cok-soluk);font-size:15px;padding:6px 0}
+
+/* Notlar */
+.notlar{flex:1;display:flex;flex-direction:column;min-height:0}
+.notlar ul{overflow:hidden;flex:1;-webkit-mask-image:linear-gradient(180deg,#000 80%,transparent);mask-image:linear-gradient(180deg,#000 80%,transparent)}
+.notlar li{font-size:16px;line-height:1.35;padding:6px 0 6px 22px;position:relative}
+.notlar li::before{content:"";position:absolute;left:0;top:10px;width:12px;height:12px;border-radius:4px;border:1.5px solid var(--soluk)}
+
+/* Durum */
+#durum{position:fixed;right:calc(14px + env(safe-area-inset-right));bottom:calc(10px + env(safe-area-inset-bottom));font-size:11px;color:var(--cok-soluk);transition:opacity .8s}
+#durum.hata{color:#ffb4a8}
+
+/* Kurulum */
+#kurulum{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;z-index:5}
+#kurulum[hidden]{display:none}
+#kurulum .cam{width:100%;max-width:460px;padding:28px}
+#kurulum h1{font-size:26px;font-weight:600;margin-bottom:6px}
+#kurulum p{color:var(--soluk);font-size:15px;line-height:1.45;margin-bottom:18px}
+#kurulum label{display:block;font-size:13px;color:var(--soluk);margin:12px 0 6px}
+#kurulum input{width:100%;font:inherit;font-size:16px;color:var(--metin);padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);outline:none;-webkit-user-select:text;user-select:text}
+#kurulum input:focus{border-color:rgba(255,255,255,.5)}
+.dugmeler{display:flex;gap:10px;margin-top:20px}
+.dugme{flex:1;font:inherit;font-size:16px;font-weight:600;padding:13px;border-radius:16px;border:1px solid rgba(255,255,255,.25);color:#0c0f16;background:linear-gradient(180deg,#fff,#dfe4ee);box-shadow:inset 0 1px 0 #fff,0 10px 24px -8px rgba(0,0,0,.6)}
+.dugme.ikincil{color:var(--metin);background:rgba(255,255,255,.08)}
+
+/* Dikey */
+@media (max-aspect-ratio:1/1){
+  #pano{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .saat{font-size:min(30vw,190px)}
+  .hava{margin-top:6px}
+  .sag{flex-direction:row}
+  .sag > .cam{flex:1}
+}
+</style>
+</head>
+<body>
+<div id="bg"><div class="foto" id="fA"></div><div class="foto" id="fB"></div></div>
+<div id="karart"></div>
+
+<main id="pano">
+  <section class="sol">
+    <div>
+      <div class="saat" id="saat">--:--</div>
+      <div class="tarih" id="tarih"></div>
+    </div>
+    <div class="sayimlar" id="sayimlar"></div>
+    <div class="cam hava">
+      <div class="hava-ust">
+        <div class="ikon" id="hIkon"></div>
+        <div><div class="derece" id="hDerece">--°</div><div class="durum" id="hDurum">Hava durumu yükleniyor</div></div>
+        <div class="hava-yan" id="hYan"></div>
+      </div>
+      <div class="gunler" id="hGunler"></div>
+    </div>
+  </section>
+  <section class="sag">
+    <div class="cam takvim">
+      <div class="ay-ust"><div class="baslik" id="ayAdi">Takvim</div></div>
+      <div class="ay" id="ay"></div>
+      <ul class="liste" id="etkinlikler"></ul>
+    </div>
+    <div class="cam notlar">
+      <div class="baslik">Notlar</div>
+      <ul id="notlar"></ul>
+    </div>
+  </section>
+</main>
+
+<div id="durum"></div>
+
+<div id="kurulum" hidden>
+  <form class="cam" id="kurulumForm" autocomplete="off">
+    <h1>Pano kurulumu</h1>
+    <p>Apps Script web uygulaması adresini ve Ayarlar sayfasındaki token değerini gir. Bilgiler yalnızca bu cihazda saklanır.</p>
+    <label for="kApi">Web uygulaması adresi</label>
+    <input id="kApi" type="url" placeholder="https://script.google.com/macros/s/.../exec" required>
+    <label for="kKey">Token</label>
+    <input id="kKey" type="text" required>
+    <div class="dugmeler">
+      <button type="button" class="dugme ikincil" id="kDemo">Demo</button>
+      <button type="submit" class="dugme">Kaydet</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var AYAR = { veriDk: 5, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
+  var GUN = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+  var GUN_K = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+  var AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function enc(s) { return encodeURIComponent(s); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var LS = {
+    get: function (k) { try { return JSON.parse(localStorage.getItem('pano.' + k)); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem('pano.' + k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  // Ayarlar: ?api=...&k=... bir kez okunur, cihazda saklanır.
+  var q = new URLSearchParams(location.search);
+  if (q.get('api')) LS.set('api', q.get('api'));
+  if (q.get('k')) LS.set('k', q.get('k'));
+  var DEMO = q.has('demo') || LS.get('demo') === true;
+  var API = LS.get('api'), KEY = LS.get('k');
+
+  function getJSON(url, sn) {
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var t = ctrl ? setTimeout(function () { ctrl.abort(); }, (sn || 25) * 1000) : null;
+    return fetch(url, ctrl ? { signal: ctrl.signal } : {}).then(function (r) {
+      clearTimeout(t);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+
+  function bugunGece() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+  function yerelTarih(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function gunFarki(d) { var b = new Date(d); b.setHours(0, 0, 0, 0); return Math.round((b - bugunGece()) / 864e5); }
+  function gunEtiketi(d) {
+    var f = gunFarki(d);
+    if (f <= 0) return 'Bugün';
+    if (f === 1) return 'Yarın';
+    if (f < 7) return GUN[d.getDay()];
+    return d.getDate() + ' ' + AY[d.getMonth()];
+  }
+  function saatYaz(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+
+  /* ---------- Saat, gece modu ---------- */
+  var sonGun = -1, uyanikBitis = 0;
+  function saatGuncelle() {
+    var d = new Date();
+    $('saat').textContent = saatYaz(d);
+    $('tarih').innerHTML = esc(GUN[d.getDay()]) + ' <span>' + d.getDate() + ' ' + AY[d.getMonth()] + '</span>';
+    var gece = (d.getHours() >= AYAR.geceBas || d.getHours() < AYAR.geceBit) && Date.now() > uyanikBitis;
+    document.body.classList.toggle('gece', gece);
+    if (d.getDate() !== sonGun) { sonGun = d.getDate(); ciz(); }
+    setTimeout(saatGuncelle, 1000 - d.getMilliseconds() + 20);
+  }
+
+  /* ---------- Veri ---------- */
+  var veri = LS.get('veri') || { etkinlikler: [], notlar: [], sayimlar: [], fotolar: [] };
+
+  function veriYukle() {
+    if (DEMO) { veri = demoVeri(); ciz(); fotolarHazirla(); durum('Demo modu'); return Promise.resolve(); }
+    return getJSON(API + '?k=' + enc(KEY)).then(function (v) {
+      if (v.hata) throw new Error(v.hata === 'yetki' ? 'Token hatalı' : v.hata);
+      var eskiSehir = veri.sehir;
+      veri = v; LS.set('veri', v);
+      ciz(); fotolarHazirla();
+      if (v.sehir !== eskiSehir) havaYukle(true);
+      durum('Güncellendi ' + saatYaz(new Date()));
+    }).catch(function (e) { durum('Bağlantı yok: ' + e.message, true); });
+  }
+
+  function durum(m, hata) { var el = $('durum'); el.textContent = m; el.className = hata ? 'hata' : ''; }
+
+  function ciz() { takvimCiz(); etkinlikCiz(); notCiz(); sayimCiz(); }
+
+  function etkinlikBaslangic(e) { return e.g ? yerelTarih(e.b) : new Date(e.b); }
+  function etkinlikBitis(e) { return e.g ? yerelTarih(e.s) : new Date(e.s); }
+
+  function takvimCiz() {
+    var simdi = new Date(), y = simdi.getFullYear(), m = simdi.getMonth();
+    $('ayAdi').textContent = AY[m] + ' ' + y;
+    var dolu = {};
+    (veri.etkinlikler || []).forEach(function (e) {
+      var d = etkinlikBaslangic(e), son = etkinlikBitis(e);
+      if (e.g) son = new Date(son.getTime() - 1);
+      for (var i = 0; i < 40 && d <= son; i++) { dolu[d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate()] = 1; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); }
+    });
+    var ilk = new Date(y, m, 1), kayma = (ilk.getDay() + 6) % 7;
+    var h = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'].map(function (g) { return '<div class="gb">' + g + '</div>'; }).join('');
+    var satir = Math.ceil((kayma + new Date(y, m + 1, 0).getDate()) / 7);
+    for (var i = 0; i < satir * 7; i++) {
+      var d = new Date(y, m, 1 - kayma + i), c = 'g';
+      if (d.getMonth() !== m) c += ' diger';
+      if (d.toDateString() === simdi.toDateString()) c += ' bugun';
+      if (dolu[d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate()]) c += ' var';
+      h += '<div class="' + c + '">' + d.getDate() + '</div>';
+    }
+    $('ay').innerHTML = h;
+  }
+
+  function etkinlikCiz() {
+    var simdi = new Date();
+    var list = (veri.etkinlikler || []).filter(function (e) { return etkinlikBitis(e) > simdi; }).slice(0, 8);
+    if (!list.length) { $('etkinlikler').innerHTML = '<li class="bos">Yaklaşan etkinlik yok</li>'; return; }
+    $('etkinlikler').innerHTML = list.map(function (e) {
+      var b = etkinlikBaslangic(e), s = etkinlikBitis(e);
+      var devam = !e.g && b <= simdi && s > simdi;
+      var gunAd = gunEtiketi(b < simdi ? simdi : b);
+      var z = devam ? 'Şu an · ' + saatYaz(s) + "'e kadar" : gunAd + ' · ' + (e.g ? 'Tüm gün' : saatYaz(b) + '–' + saatYaz(s));
+      return '<li class="etk' + (devam ? ' simdi' : '') + '"><span class="nokta" style="background:' + esc(e.r || '#8ab4ff') + ';color:' + esc(e.r || '#8ab4ff') + '"></span>' +
+        '<div><div class="etk-ad">' + esc(e.t) + '</div><div class="etk-zaman">' + esc(z) + '</div></div></li>';
+    }).join('');
+  }
+
+  function notCiz() {
+    var n = (veri.notlar || []).slice(0, 10);
+    $('notlar').innerHTML = n.length ? n.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') : '<li class="bos" style="padding-left:0">Not yok</li>';
+  }
+
+  function sayimCiz() {
+    var b = bugunGece();
+    var list = (veri.sayimlar || []).map(function (x) {
+      var d = yerelTarih(x.tarih);
+      if (x.yillik) { d.setFullYear(b.getFullYear()); if (d < b) d.setFullYear(b.getFullYear() + 1); }
+      return { ad: x.ad, gun: gunFarki(d) };
+    }).filter(function (x) { return x.gun >= 0; }).sort(function (a, c) { return a.gun - c.gun; }).slice(0, 3);
+    $('sayimlar').innerHTML = list.map(function (x) {
+      var sayi = x.gun === 0 ? '<b>Bugün</b>' : '<b>' + x.gun + '</b><i>gün</i>';
+      return '<div class="cam cip">' + sayi + '<span>' + esc(x.ad) + '</span></div>';
+    }).join('');
+  }
+
+  /* ---------- Hava durumu (Open-Meteo, anahtarsız) ---------- */
+  var HAVA = {
+    0: 'Açık', 1: 'Çoğunlukla açık', 2: 'Parçalı bulutlu', 3: 'Kapalı', 45: 'Sisli', 48: 'Kırağılı sis',
+    51: 'Hafif çisenti', 53: 'Çisenti', 55: 'Yoğun çisenti', 56: 'Donan çisenti', 57: 'Donan çisenti',
+    61: 'Hafif yağmur', 63: 'Yağmur', 65: 'Kuvvetli yağmur', 66: 'Donan yağmur', 67: 'Donan yağmur',
+    71: 'Hafif kar', 73: 'Kar', 75: 'Yoğun kar', 77: 'Kar taneleri', 80: 'Sağanak', 81: 'Sağanak', 82: 'Şiddetli sağanak',
+    85: 'Kar sağanağı', 86: 'Kar sağanağı', 95: 'Gök gürültülü fırtına', 96: 'Dolulu fırtına', 99: 'Dolulu fırtına'
+  };
+  var BULUT = '<path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 11 3.5 3.5 0 0 0 7 18z"/>';
+  var BULUT_UST = '<path d="M7 14.5h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 7.5 3.5 3.5 0 0 0 7 14.5z"/>';
+  function ikon(k, gunduz) {
+    var i;
+    if (k === 0 || k === 1) i = gunduz ? '<circle cx="12" cy="12" r="4.3"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>' : '<path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/>';
+    else if (k === 2) i = '<path d="M8.5 2.5v1.3M3.4 7.6H2.1M4.9 4l.9.9M13 4l-.9.9"/><path d="M5.2 10.6a3.6 3.6 0 0 1 6.6-3"/>' + '<path d="M9 20h9a3.5 3.5 0 0 0 .5-6.96A5 5 0 0 0 9 13.3 3.4 3.4 0 0 0 9 20z"/>';
+    else if (k === 3) i = BULUT;
+    else if (k === 45 || k === 48) i = '<path d="M4 8h16M6 12h12M4 16h16M8 20h8"/>';
+    else if (k >= 71 && k <= 77 || k === 85 || k === 86) i = BULUT_UST + '<path d="M8 18v.01M12 19.5v.01M16 18v.01M10 21.5v.01M14 21.5v.01" stroke-width="2.4"/>';
+    else if (k >= 95) i = BULUT_UST + '<path d="M12.5 14.5l-2.5 4h3.5l-2 4"/>';
+    else if (k >= 51) i = BULUT_UST + '<path d="M8.5 17.5l-1 3M12.5 17.5l-1 3M16.5 17.5l-1 3"/>';
+    else i = BULUT;
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' + i + '</svg>';
+  }
+
+  function konumBul() {
+    if (veri.sehir) {
+      var kayit = LS.get('konum');
+      if (kayit && kayit.sehir === veri.sehir) return Promise.resolve(kayit);
+      return getJSON('https://geocoding-api.open-meteo.com/v1/search?count=1&language=tr&name=' + enc(veri.sehir)).then(function (r) {
+        if (!r.results || !r.results.length) throw new Error('Şehir bulunamadı');
+        var k = { sehir: veri.sehir, ad: r.results[0].name, lat: r.results[0].latitude, lon: r.results[0].longitude };
+        LS.set('konum', k); return k;
+      });
+    }
+    var eski = LS.get('konum');
+    return new Promise(function (ok, red) {
+      if (!navigator.geolocation) { return eski ? ok(eski) : red(new Error('Konum yok')); }
+      navigator.geolocation.getCurrentPosition(function (p) {
+        var k = { sehir: '', ad: 'Konumum', lat: p.coords.latitude, lon: p.coords.longitude };
+        LS.set('konum', k); ok(k);
+      }, function () { eski ? ok(eski) : red(new Error('Konum izni yok')); }, { timeout: 15000, maximumAge: 36e5 });
+    });
+  }
+
+  function havaYukle() {
+    konumBul().then(function (k) {
+      return getJSON('https://api.open-meteo.com/v1/forecast?latitude=' + k.lat + '&longitude=' + k.lon +
+        '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day' +
+        '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' +
+        '&timezone=auto&forecast_days=5').then(function (h) { h._ad = k.ad; LS.set('hava', h); havaCiz(h); });
+    }).catch(function (e) {
+      var eski = LS.get('hava');
+      if (eski) havaCiz(eski); else $('hDurum').textContent = e.message;
+    });
+  }
+
+  function havaCiz(h) {
+    var c = h.current, d = h.daily;
+    $('hIkon').innerHTML = ikon(c.weather_code, c.is_day);
+    $('hDerece').textContent = Math.round(c.temperature_2m) + '°';
+    $('hDurum').textContent = (HAVA[c.weather_code] || '') + ' · ' + (h._ad || '');
+    var gd = d.sunrise[0] ? d.sunrise[0].slice(11, 16) : '', gb = d.sunset[0] ? d.sunset[0].slice(11, 16) : '';
+    $('hYan').innerHTML = 'Hissedilen <b>' + Math.round(c.apparent_temperature) + '°</b><br>Rüzgâr <b>' + Math.round(c.wind_speed_10m) + ' km/s</b><br>Nem <b>%' + c.relative_humidity_2m + '</b><br>' + gd + ' ↑ ' + gb + ' ↓';
+    var g = '';
+    for (var i = 0; i < d.time.length && i < 5; i++) {
+      var t = yerelTarih(d.time[i]), yg = d.precipitation_probability_max[i];
+      g += '<div class="gun"><div class="ad">' + (i === 0 ? 'Bugün' : GUN_K[t.getDay()]) + '</div><div class="ikon">' + ikon(d.weather_code[i], 1) + '</div>' +
+        '<div class="mm">' + Math.round(d.temperature_2m_max[i]) + '°<em>' + Math.round(d.temperature_2m_min[i]) + '°</em></div>' +
+        '<div class="yagis">' + (yg >= 20 ? '%' + yg : '') + '</div></div>';
+    }
+    $('hGunler').innerHTML = g;
+  }
+
+  /* ---------- Fotoğraflar ---------- */
+  var fotoSira = [], fotoIdx = -1, aktif = 'fA', fotoZamanlayici = null, fotoAnahtar = '';
+  function fotolarHazirla() {
+    var list = (veri.fotolar || []).slice();
+    var anahtar = list.join(',');
+    if (anahtar === fotoAnahtar) return;
+    fotoAnahtar = anahtar;
+    for (var i = list.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = list[i]; list[i] = list[j]; list[j] = t; }
+    fotoSira = list; fotoIdx = -1;
+    clearInterval(fotoZamanlayici);
+    if (!list.length) return;
+    sonrakiFoto();
+    fotoZamanlayici = setInterval(sonrakiFoto, AYAR.fotoSn * 1000);
+  }
+  function sonrakiFoto() {
+    if (!fotoSira.length || document.body.classList.contains('gece')) return;
+    fotoIdx = (fotoIdx + 1) % fotoSira.length;
+    var id = fotoSira[fotoIdx];
+    var yukle = DEMO ? Promise.resolve({ url: id }) : getJSON(API + '?k=' + enc(KEY) + '&foto=' + enc(id), 60).then(function (r) {
+      if (!r.data) throw new Error('foto'); return { url: 'data:' + r.mime + ';base64,' + r.data };
+    });
+    yukle.then(function (r) {
+      var img = new Image();
+      img.onload = function () {
+        var yeni = $(aktif === 'fA' ? 'fB' : 'fA'), eski = $(aktif);
+        yeni.style.zIndex = 2; eski.style.zIndex = 1;
+        yeni.style.backgroundImage = 'url("' + r.url + '")';
+        requestAnimationFrame(function () { yeni.classList.add('acik'); });
+        setTimeout(function () { eski.classList.remove('acik'); eski.style.backgroundImage = ''; }, 2600);
+        aktif = yeni.id;
+      };
+      img.src = r.url;
+    }).catch(function () {});
+  }
+
+  /* ---------- Dokunma: gece uyandır, gündüz sadece foto ---------- */
+  var sadeceFotoZ = null;
+  document.addEventListener('click', function (ev) {
+    if (!$('kurulum').hidden) return;
+    if (document.body.classList.contains('gece')) { uyanikBitis = Date.now() + 60000; document.body.classList.remove('gece'); return; }
+    if (!fotoSira.length) return;
+    var b = document.body.classList.toggle('sadeceFoto');
+    clearTimeout(sadeceFotoZ);
+    if (b) sadeceFotoZ = setTimeout(function () { document.body.classList.remove('sadeceFoto'); }, 30000);
+  });
+
+  /* ---------- Ekran koruma: hafif kaydırma ---------- */
+  setInterval(function () {
+    $('pano').style.transform = 'translate(' + (Math.random() * 10 - 5).toFixed(1) + 'px,' + (Math.random() * 10 - 5).toFixed(1) + 'px)';
+  }, 10 * 60000);
+
+  /* ---------- Demo verisi ---------- */
+  function demoVeri() {
+    var s = new Date();
+    function t(gun, sa, dk) { var d = new Date(s.getFullYear(), s.getMonth(), s.getDate() + gun, sa, dk); return d.toISOString(); }
+    function g(gun) { var d = new Date(s.getFullYear(), s.getMonth(), s.getDate() + gun); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+    return {
+      sehir: 'Köln',
+      etkinlikler: [
+        { t: 'Sellbird ekip toplantısı', g: false, b: t(0, s.getHours(), 0), s: t(0, s.getHours() + 1, 0), r: '#7aa2ff' },
+        { t: 'Lisi ile akşam yemeği', g: false, b: t(0, 19, 30), s: t(0, 21, 0), r: '#ff8fa3' },
+        { t: 'Vergi danışmanı', g: false, b: t(1, 10, 0), s: t(1, 11, 0), r: '#7ee0b5' },
+        { t: 'Tatil', g: true, b: g(3), s: g(6), r: '#ffd27a' },
+        { t: 'Dişçi randevusu', g: false, b: t(8, 14, 15), s: t(8, 15, 0), r: '#c7a6ff' }
+      ],
+      notlar: ['Kargo etiketlerini yazdır', 'Faturaları kontrol et', 'Annemi ara', 'iPad şarj kablosu al'],
+      sayimlar: [{ ad: 'Yılbaşı', tarih: s.getFullYear() + '-12-31', yillik: true }, { ad: 'Tatil', tarih: g(3), yillik: false }, { ad: 'Lisi doğum günü', tarih: g(19), yillik: true }],
+      fotolar: []
+    };
+  }
+
+  /* ---------- Başlat ---------- */
+  function kurulumGoster() {
+    $('kurulum').hidden = false; $('pano').style.opacity = .15;
+    $('kurulumForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      LS.set('api', $('kApi').value.trim()); LS.set('k', $('kKey').value.trim()); LS.set('demo', false);
+      location.replace(location.pathname);
+    });
+    $('kDemo').addEventListener('click', function () { LS.set('demo', true); location.replace(location.pathname); });
+  }
+
+  saatGuncelle();
+  if (!DEMO && (!API || !KEY)) { kurulumGoster(); return; }
+  if (q.has('api') || q.has('k')) history.replaceState(null, '', location.pathname);
+
+  ciz();
+  var eskiHava = LS.get('hava'); if (eskiHava) havaCiz(eskiHava);
+  veriYukle().then(havaYukle);
+  setInterval(veriYukle, AYAR.veriDk * 60000);
+  setInterval(havaYukle, AYAR.havaDk * 60000);
+  setTimeout(function () { if (navigator.onLine !== false) location.reload(); }, AYAR.yenidenYukleSaat * 36e5);
+})();
+</script>
+</body>
+</html>
