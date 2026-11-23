@@ -54,6 +54,9 @@ h2{font-size:13px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
 label{display:block;font-size:13px;color:var(--soluk);margin:12px 0 6px}
 input[type=text],input[type=url],input[type=date]{width:100%;font:inherit;font-size:17px;color:var(--metin);padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);outline:none;-webkit-appearance:none;appearance:none;min-height:48px}
 input:focus{border-color:rgba(255,255,255,.5)}
+select{width:100%;font:inherit;font-size:17px;color:var(--metin);padding:12px 40px 12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.18);min-height:48px;-webkit-appearance:none;appearance:none;
+  background:rgba(0,0,0,.25) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center}
+select option{color:#000}
 input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .reihe{display:flex;gap:10px;align-items:flex-end}
 .reihe > div{flex:1}
@@ -144,6 +147,20 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
       <div id="fotoInfo"></div>
     </section>
 
+    <section class="cam" style="margin-bottom:16px">
+      <h2>Radio</h2>
+      <div id="senderListe"></div>
+      <label for="senderWahl">Sender hinzufügen</label>
+      <select id="senderWahl"></select>
+      <form id="senderEigen" hidden autocomplete="off">
+        <label for="sName">Name</label>
+        <input id="sName" type="text" maxlength="40" placeholder="z. B. Mein Sender">
+        <label for="sUrl">Stream-Adresse (https://…)</label>
+        <input id="sUrl" type="url" placeholder="https://…/stream.mp3">
+      </form>
+      <button class="dugme" type="button" id="senderPlus">Hinzufügen</button>
+    </section>
+
     <section class="cam">
       <h2>Wetter</h2>
       <form id="stadtForm" autocomplete="off">
@@ -165,7 +182,25 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     { n: 'kalender', ad: 'Kalender', info: 'Monat und Termine' },
     { n: 'wetter', ad: 'Wetter', info: 'Aktuell und 5 Tage' },
     { n: 'fotos', ad: 'Fotos', info: 'Album aus Google Drive' },
-    { n: 'countdown', ad: 'Countdowns', info: 'Tage bis zu Terminen' }
+    { n: 'countdown', ad: 'Countdowns', info: 'Tage bis zu Terminen' },
+    { n: 'radio', ad: 'Radio', info: 'Sender abspielen' }
+  ];
+  var RADIO_VORSCHLAEGE = [
+    { name: 'NDR 2', url: 'https://icecast.ndr.de/ndr/ndr2/niedersachsen/mp3/128/stream.mp3' },
+    { name: 'NDR 1 Niedersachsen', url: 'https://icecast.ndr.de/ndr/ndr1niedersachsen/braunschweig/mp3/128/stream.mp3' },
+    { name: 'radio ffn', url: 'https://stream.ffn.de/ffn/mp3-192/stream.mp3' },
+    { name: '1LIVE', url: 'https://wdr-1live-live.icecastssl.wdr.de/wdr/1live/live/mp3/128/stream.mp3' },
+    { name: 'WDR 2', url: 'https://wdr-wdr2-rheinland.icecastssl.wdr.de/wdr/wdr2/rheinland/mp3/128/stream.mp3' },
+    { name: 'Antenne Bayern', url: 'https://stream.antenne.de/antenne/stream/mp3' },
+    { name: 'Deutschlandfunk', url: 'https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3' },
+    { name: '80s80s', url: 'https://streams.80s80s.de/web/mp3-192/streams.80s80s.de/' },
+    { name: 'Klassik Radio', url: 'https://stream.klassikradio.de/live/mp3-192/stream.klassikradio.de/' },
+    { name: 'Power Türk', url: 'https://listen.powerapp.com.tr/powerturk/mpeg/icecast.audio' },
+    { name: 'Power Türk Akustik', url: 'https://listen.powerapp.com.tr/powerturkakustik/mpeg/icecast.audio' },
+    { name: 'Power Türk Slow', url: 'https://listen.powerapp.com.tr/powerturkslow/mpeg/icecast.audio' },
+    { name: 'Joy Türk', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/JOY_TURK.mp3' },
+    { name: 'Super FM', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/SUPER_FM.mp3' },
+    { name: 'Metro FM', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/METRO_FM.mp3' }
   ];
   var MONATE = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'];
 
@@ -250,14 +285,56 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
     if (document.activeElement !== $('stadt')) $('stadt').value = daten.sehir || '';
     anordnungZeigen();
+    senderZeigen();
     galerieZeigen();
   }
 
+  /* ---------- Radio ---------- */
+  function senderHolen() {
+    if (daten.radio) return daten.radio.slice();
+    return [0, 1, 2, 9, 12, 6].map(function (i) { return RADIO_VORSCHLAEGE[i]; });
+  }
+  function senderZeigen() {
+    var l = senderHolen();
+    $('senderListe').innerHTML = l.length ? l.map(function (s, i) {
+      return '<div class="cd"><div class="txt"><b>' + esc(s.name) + '</b><span>' + esc(s.url.replace(/^https:\/\//, '').split('/')[0]) + '</span></div>' +
+        '<button class="loesch" type="button" data-s="' + i + '" aria-label="' + esc(s.name) + ' entfernen">×</button></div>';
+    }).join('') : '<div class="leer">Keine Sender</div>';
+    var vorhanden = l.map(function (s) { return s.url; });
+    $('senderWahl').innerHTML = RADIO_VORSCHLAEGE.filter(function (s) { return vorhanden.indexOf(s.url) === -1; })
+      .map(function (s) { return '<option value="' + esc(s.url) + '">' + esc(s.name) + '</option>'; }).join('') +
+      '<option value="eigen">Eigener Sender …</option>';
+    $('senderEigen').hidden = $('senderWahl').value !== 'eigen';
+  }
+  $('senderWahl').addEventListener('change', function () { $('senderEigen').hidden = this.value !== 'eigen'; });
+  $('senderPlus').addEventListener('click', function () {
+    var l = senderHolen(), v = $('senderWahl').value, neu;
+    if (v === 'eigen') {
+      neu = { name: $('sName').value.trim(), url: $('sUrl').value.trim() };
+      if (!neu.name || !/^https:\/\//.test(neu.url)) { toast('Name und https-Adresse eingeben', true); return; }
+    } else {
+      neu = RADIO_VORSCHLAEGE.filter(function (s) { return s.url === v; })[0];
+      if (!neu) return;
+    }
+    l.push(neu);
+    senden({ radio: l }, neu.name + ' hinzugefügt').then(function () { $('sName').value = ''; $('sUrl').value = ''; });
+  });
+  $('senderListe').addEventListener('click', function (e) {
+    var i = e.target.getAttribute('data-s'); if (i === null) return;
+    var l = senderHolen(), s = l[+i];
+    if (l.length === 1) { toast('Mindestens ein Sender muss bleiben', true); return; }
+    if (!confirm('„' + s.name + '“ entfernen?')) return;
+    l.splice(+i, 1);
+    senden({ radio: l }, 'Sender entfernt');
+  });
+
   /* ---------- Anordnung ---------- */
-  var W_NAMEN = { uhr: 'Uhr & Datum', countdown: 'Countdowns', fotos: 'Fotos', wetter: 'Wetter', kalender: 'Kalender' };
+  var W_NAMEN = { uhr: 'Uhr & Datum', countdown: 'Countdowns', fotos: 'Fotos', wetter: 'Wetter', kalender: 'Kalender', radio: 'Radio' };
   function layoutHolen() {
-    var l = daten.layout || { links: ['uhr', 'countdown', 'fotos'], rechts: ['wetter', 'kalender'] };
-    return { links: l.links.slice(), rechts: l.rechts.slice() };
+    var l = daten.layout || { links: ['uhr', 'countdown', 'fotos'], rechts: ['wetter', 'kalender', 'radio'] };
+    var r = { links: l.links.slice(), rechts: l.rechts.slice() };
+    Object.keys(W_NAMEN).forEach(function (w) { if (r.links.indexOf(w) === -1 && r.rechts.indexOf(w) === -1) r.rechts.push(w); });
+    return r;
   }
   function anordnungZeigen() {
     var l = layoutHolen(), a = daten.anzeige || {};

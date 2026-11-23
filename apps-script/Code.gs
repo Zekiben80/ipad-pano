@@ -48,9 +48,31 @@ function doGet(e) {
   }
 }
 
-var BEREICHE = ['kalender', 'wetter', 'fotos', 'countdown'];
-var WIDGETS = ['uhr', 'countdown', 'fotos', 'wetter', 'kalender'];
-var LAYOUT_STANDARD = { links: ['uhr', 'countdown', 'fotos'], rechts: ['wetter', 'kalender'] };
+var BEREICHE = ['kalender', 'wetter', 'fotos', 'countdown', 'radio'];
+var WIDGETS = ['uhr', 'countdown', 'fotos', 'wetter', 'kalender', 'radio'];
+var LAYOUT_STANDARD = { links: ['uhr', 'countdown', 'fotos'], rechts: ['wetter', 'kalender', 'radio'] };
+var RADIO_STANDARD = [
+  { name: 'NDR 2', url: 'https://icecast.ndr.de/ndr/ndr2/niedersachsen/mp3/128/stream.mp3' },
+  { name: 'NDR 1 Niedersachsen', url: 'https://icecast.ndr.de/ndr/ndr1niedersachsen/braunschweig/mp3/128/stream.mp3' },
+  { name: 'radio ffn', url: 'https://stream.ffn.de/ffn/mp3-192/stream.mp3' },
+  { name: 'Power Türk', url: 'https://listen.powerapp.com.tr/powerturk/mpeg/icecast.audio' },
+  { name: 'Joy Türk', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/JOY_TURK.mp3' },
+  { name: 'Deutschlandfunk', url: 'https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3' }
+];
+
+/** Senderliste prüfen: nur https-Adressen, max. 20 Sender. */
+function radioPruefen(liste) {
+  return (Array.isArray(liste) ? liste : []).filter(function (s) {
+    return s && String(s.name || '').trim() && /^https:\/\/[^\s"'<>]+$/.test(String(s.url || '').trim());
+  }).slice(0, 20).map(function (s) {
+    return { name: String(s.name).trim().slice(0, 40), url: String(s.url).trim().slice(0, 500) };
+  });
+}
+
+function radioLesen(einst) {
+  try { if (einst.radio) return radioPruefen(JSON.parse(einst.radio)); } catch (e) {}
+  return RADIO_STANDARD;
+}
 
 /** Anordnung prüfen: nur bekannte Bereiche, jeder genau einmal. */
 function layoutPruefen(l) {
@@ -87,6 +109,7 @@ function doPost(e) {
         if (n in body.anzeige) einstellungSetzen('zeige_' + n, body.anzeige[n] === true, 'Auf dem Pano anzeigen (Admin-Seite).');
       });
     }
+    if (Array.isArray(body.radio)) einstellungSetzen('radio', JSON.stringify(radioPruefen(body.radio)), 'Radiosender (Admin-Seite).');
     if (body.layout) einstellungSetzen('layout', JSON.stringify(layoutPruefen(body.layout)), 'Anordnung (Admin-Seite).');
     if (typeof body.stadt === 'string') einstellungSetzen('stadt', body.stadt.trim().slice(0, 80));
     if (Array.isArray(body.countdowns)) countdownsSchreiben(body.countdowns);
@@ -152,6 +175,7 @@ function daten(einst) {
     zaman: new Date().toISOString(),
     anzeige: anzeige,
     layout: layoutLesen(einst),
+    radio: radioLesen(einst),
     sehir: einst.stadt || '',
     etkinlikler: termine(einst),
     notlar: notizen(),

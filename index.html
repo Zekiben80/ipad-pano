@@ -28,8 +28,25 @@ ul{list-style:none}
   background:linear-gradient(100deg,rgba(4,6,10,.66) 0%,rgba(4,6,10,.30) 52%,rgba(4,6,10,.58) 100%)}
 body.gece #karart{background:rgba(0,0,0,.82)}
 body.gece .foto{opacity:0!important}
+/* Radio */
+.radio{flex:none;display:flex;align-items:center;gap:14px;padding:14px 16px}
+.r-play{flex:none;width:54px;height:54px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;color:#0c0f16;
+  background:linear-gradient(180deg,#fff,#dbe1ec);box-shadow:inset 0 1px 0 #fff,0 8px 20px -6px rgba(0,0,0,.6)}
+.r-play svg{width:22px;height:22px;fill:currentColor}
+.r-text{flex:1;min-width:0}
+.r-name{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-status{font-size:13px;color:var(--soluk);margin-top:2px}
+.radio.spielt .r-status{color:var(--vurgu)}
+.r-knopf{flex:none;width:42px;height:42px;border-radius:14px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:var(--metin);display:flex;align-items:center;justify-content:center}
+.r-knopf svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.eq{display:none;align-items:flex-end;gap:3px;height:20px;flex:none}
+.eq i{width:3px;height:6px;border-radius:2px;background:var(--vurgu);animation:eq 1s ease-in-out infinite alternate}
+.eq i:nth-child(2){animation-delay:-.3s}.eq i:nth-child(3){animation-delay:-.6s}.eq i:nth-child(4){animation-delay:-.9s}
+.radio.spielt .eq{display:flex}
+@keyframes eq{from{height:4px}to{height:20px}}
+
 /* Bereiche ein-/ausblenden (Admin-Seite) */
-body.ohne-wetter .hava,body.ohne-kalender .takvim,body.ohne-countdown .sayimlar,body.links-leer .sol,body.rechts-leer .sag{display:none!important}
+body.ohne-radio .radio,body.ohne-wetter .hava,body.ohne-kalender .takvim,body.ohne-countdown .sayimlar,body.links-leer .sol,body.rechts-leer .sag{display:none!important}
 body.links-leer #pano,body.rechts-leer #pano{grid-template-columns:1fr}
 .sol.mitte,.sag.mitte{justify-content:center}
 
@@ -173,9 +190,20 @@ body.sadeceFoto #tamFoto{opacity:1}
       <div class="ay" id="ay"></div>
       <ul class="liste" id="etkinlikler"></ul>
     </div>
+    <div class="cam radio" id="radio" data-w="radio">
+      <button class="r-play" id="rPlay" type="button" aria-label="Radio abspielen"></button>
+      <div class="r-text">
+        <div class="r-name" id="rName">Radio</div>
+        <div class="r-status" id="rStatus">Zum Abspielen tippen</div>
+      </div>
+      <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <button class="r-knopf" id="rZurueck" type="button" aria-label="Vorheriger Sender"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="r-knopf" id="rWeiter" type="button" aria-label="Nächster Sender"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
   </section>
 </main>
 
+<audio id="audio" preload="none" playsinline></audio>
 <div id="durum"></div>
 
 <div id="kurulum" hidden>
@@ -275,7 +303,9 @@ body.sadeceFoto #tamFoto{opacity:1}
 
   function anzeigeAnwenden() {
     var a = veri.anzeige || {}, b = document.body.classList;
-    ['kalender', 'wetter', 'fotos', 'countdown'].forEach(function (n) { b.toggle('ohne-' + n, a[n] === false); });
+    ['kalender', 'wetter', 'fotos', 'countdown', 'radio'].forEach(function (n) { b.toggle('ohne-' + n, a[n] === false); });
+    if (a.radio === false && radioAn) radioStop();
+    radioZeigen();
     var l = veri.layout;
     if (l && l.links && l.rechts) {
       [[l.links, '.sol'], [l.rechts, '.sag']].forEach(function (p) {
@@ -464,6 +494,62 @@ body.sadeceFoto #tamFoto{opacity:1}
       img.src = r.url;
     }).catch(function () {});
   }
+
+  /* ---------- Radio ---------- */
+  var RADIO_STANDARD = [
+    { name: 'NDR 2', url: 'https://icecast.ndr.de/ndr/ndr2/niedersachsen/mp3/128/stream.mp3' },
+    { name: 'NDR 1 Niedersachsen', url: 'https://icecast.ndr.de/ndr/ndr1niedersachsen/braunschweig/mp3/128/stream.mp3' },
+    { name: 'radio ffn', url: 'https://stream.ffn.de/ffn/mp3-192/stream.mp3' },
+    { name: 'Power Türk', url: 'https://listen.powerapp.com.tr/powerturk/mpeg/icecast.audio' },
+    { name: 'Joy Türk', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/JOY_TURK.mp3' },
+    { name: 'Deutschlandfunk', url: 'https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3' }
+  ];
+  var PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+  var STOP = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>';
+  var audio = $('audio'), radioAn = false, radioNeu = null, radioVersuch = 0, radioIdx = LS.get('radioIdx') || 0;
+  function sender() { return veri.radio && veri.radio.length ? veri.radio : RADIO_STANDARD; }
+  function radioStatus(t) { $('rStatus').textContent = t; }
+  function radioZeigen() {
+    var l = sender();
+    if (radioIdx >= l.length) radioIdx = 0;
+    $('rName').textContent = l[radioIdx].name;
+    $('rPlay').innerHTML = radioAn ? STOP : PLAY;
+    $('rPlay').setAttribute('aria-label', radioAn ? 'Radio stoppen' : 'Radio abspielen');
+    if (!radioAn) radioStatus(l.length > 1 ? 'Sender ' + (radioIdx + 1) + ' von ' + l.length : 'Zum Abspielen tippen');
+  }
+  function radioStart() {
+    clearTimeout(radioNeu);
+    radioAn = true; radioZeigen(); radioStatus('Verbinde …');
+    audio.src = sender()[radioIdx].url;
+    var versuch = ++radioVersuch;
+    var p = audio.play();
+    // Nur der letzte Versuch zählt; ein Senderwechsel bricht den alten play() mit AbortError ab.
+    if (p && p.catch) p.catch(function (e) {
+      if (versuch !== radioVersuch || (e && e.name === 'AbortError')) return;
+      radioAn = false; radioZeigen(); radioStatus('Zum Abspielen tippen'); $('radio').classList.remove('spielt');
+    });
+  }
+  function radioStop() {
+    clearTimeout(radioNeu); radioVersuch++;
+    radioAn = false; audio.pause(); audio.removeAttribute('src'); audio.load();
+    $('radio').classList.remove('spielt'); radioZeigen();
+  }
+  function radioWechsel(r) {
+    var l = sender(); radioIdx = (radioIdx + r + l.length) % l.length; LS.set('radioIdx', radioIdx);
+    if (radioAn) radioStart(); else radioZeigen();
+  }
+  audio.addEventListener('playing', function () { $('radio').classList.add('spielt'); radioStatus('Live'); });
+  audio.addEventListener('waiting', function () { if (radioAn) radioStatus('Verbinde …'); });
+  audio.addEventListener('error', function () {
+    if (!radioAn) return;
+    $('radio').classList.remove('spielt'); radioStatus('Unterbrochen, neuer Versuch …');
+    clearTimeout(radioNeu); radioNeu = setTimeout(radioStart, 5000);
+  });
+  $('rPlay').addEventListener('click', function () { radioAn ? radioStop() : radioStart(); });
+  $('rZurueck').addEventListener('click', function () { radioWechsel(-1); });
+  $('rWeiter').addEventListener('click', function () { radioWechsel(1); });
+  // Tippen auf das Radio soll nicht den Foto-Modus auslösen.
+  $('radio').addEventListener('click', function (e) { if (!document.body.classList.contains('gece')) e.stopPropagation(); });
 
   /* ---------- Dokunma: gece uyandır, gündüz sadece foto ---------- */
   var sadeceFotoZ = null;
