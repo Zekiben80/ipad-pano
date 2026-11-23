@@ -237,7 +237,14 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
   if (q.get('api')) LS.set('api', q.get('api'));
   if (q.get('k')) LS.set('k', q.get('k'));
   var STANDARD_API = 'https://script.google.com/macros/s/AKfycbwcjpXKheeCJIieBHme-CYCRY0BzdEfKUcxqa97zgv4y72mJRwa99DJJK_PSiNRoGTI/exec';
-  var API = LS.get('api') || STANDARD_API, KEY = LS.get('k');
+  // Token dreifach merken: localStorage, Cookie und Adresse (?k=). So kennt ihn auch ein Home-Bildschirm-Symbol.
+  function keksLesen() { var m = document.cookie.match(/(?:^|; )pano_k=([^;]*)/); return m ? decodeURIComponent(m[1]) : null; }
+  function keksSetzen(v) { try { document.cookie = 'pano_k=' + encodeURIComponent(v) + '; max-age=315360000; path=/; secure; samesite=strict'; } catch (e) {} }
+  var API = LS.get('api') || STANDARD_API, KEY = q.get('k') || LS.get('k') || keksLesen();
+  if (KEY) {
+    LS.set('k', KEY); keksSetzen(KEY);
+    if (!q.get('k')) try { history.replaceState(null, '', location.pathname + '?k=' + encodeURIComponent(KEY)); } catch (e) {}
+  }
   var daten = null, laeuft = false;
 
   var toastZ;
@@ -494,8 +501,9 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
   $('einrichten').addEventListener('submit', function (e) {
     e.preventDefault();
-    LS.set('api', $('eApi').value.trim()); LS.set('k', $('eKey').value.trim());
-    location.replace(location.pathname);
+    var k = $('eKey').value.trim();
+    LS.set('api', $('eApi').value.trim()); LS.set('k', k); keksSetzen(k);
+    location.replace(location.pathname + '?k=' + encodeURIComponent(k));
   });
 
   $('eApi').value = API || ''; $('eKey').value = KEY || '';

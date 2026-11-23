@@ -52,7 +52,16 @@ body.gece .foto{opacity:0!important}
 body.diashow #ds{display:flex}
 .ds-saat{font-size:min(13vw,112px);font-weight:200;line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums;text-shadow:0 2px 24px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.4)}
 .ds-tarih{font-size:20px;font-weight:500;margin-top:8px;color:rgba(255,255,255,.88);text-shadow:0 1px 10px rgba(0,0,0,.6)}
-.ds-temp{font-size:min(9vw,72px);font-weight:300;line-height:1;letter-spacing:-.03em;text-shadow:0 2px 24px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.4)}
+.ds-rechts{text-align:right}
+.ds-temp{display:flex;align-items:center;justify-content:flex-end;gap:.12em;font-size:min(13vw,112px);font-weight:200;line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums;
+  text-shadow:0 2px 24px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.4)}
+.ds-temp .ikon svg{width:.7em;height:.7em;stroke-width:1.3;filter:drop-shadow(0 2px 10px rgba(0,0,0,.5))}
+.ds-tage{display:flex;justify-content:flex-end;gap:26px;margin-top:14px}
+.ds-tag{text-align:center;font-size:18px;font-weight:500;text-shadow:0 1px 10px rgba(0,0,0,.65),0 1px 2px rgba(0,0,0,.5)}
+.ds-tag .ad{color:rgba(255,255,255,.85)}
+.ds-tag .ikon{display:flex;justify-content:center;margin:5px 0 4px}
+.ds-tag .ikon svg{width:34px;height:34px;filter:drop-shadow(0 1px 6px rgba(0,0,0,.55))}
+.ds-tag em{font-style:normal;color:rgba(255,255,255,.7);margin-left:5px}
 body.diashow #pano [data-w]:not(.cerceve){display:none!important}
 html body.diashow .sol,html body.diashow .sag{display:block!important}
 body.diashow .cerceve{display:block;position:fixed;inset:0;z-index:-1;border:0;border-radius:0;box-shadow:none;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
@@ -221,7 +230,10 @@ body.sadeceFoto #tamFoto{opacity:1}
 
 <div id="ds" aria-hidden="true">
   <div class="ds-uhr"><div class="ds-saat" id="dsSaat">--:--</div><div class="ds-tarih" id="dsTarih"></div></div>
-  <div class="ds-temp" id="dsTemp"></div>
+  <div class="ds-rechts">
+    <div class="ds-temp"><span class="ikon" id="dsIkon"></span><span id="dsTemp"></span></div>
+    <div class="ds-tage" id="dsTage"></div>
+  </div>
 </div>
 <audio id="audio" preload="none" playsinline></audio>
 <div id="durum"></div>
@@ -265,7 +277,14 @@ body.sadeceFoto #tamFoto{opacity:1}
   if (q.get('k')) LS.set('k', q.get('k'));
   var DEMO = q.has('demo') || LS.get('demo') === true;
   var STANDARD_API = 'https://script.google.com/macros/s/AKfycbwcjpXKheeCJIieBHme-CYCRY0BzdEfKUcxqa97zgv4y72mJRwa99DJJK_PSiNRoGTI/exec';
-  var API = LS.get('api') || STANDARD_API, KEY = LS.get('k');
+  // Token dreifach merken: localStorage, Cookie und Adresse (?k=). So kennt ihn auch ein Home-Bildschirm-Symbol.
+  function keksLesen() { var m = document.cookie.match(/(?:^|; )pano_k=([^;]*)/); return m ? decodeURIComponent(m[1]) : null; }
+  function keksSetzen(v) { try { document.cookie = 'pano_k=' + encodeURIComponent(v) + '; max-age=315360000; path=/; secure; samesite=strict'; } catch (e) {} }
+  var API = LS.get('api') || STANDARD_API, KEY = q.get('k') || LS.get('k') || keksLesen();
+  if (KEY && !q.has('demo')) {
+    LS.set('k', KEY); keksSetzen(KEY);
+    if (!q.get('k')) try { history.replaceState(null, '', location.pathname + '?k=' + encodeURIComponent(KEY)); } catch (e) {}
+  }
 
   function getJSON(url, sn) {
     var ctrl = window.AbortController ? new AbortController() : null;
@@ -470,17 +489,21 @@ body.sadeceFoto #tamFoto{opacity:1}
     $('hIkon').innerHTML = ikon(c.weather_code, c.is_day);
     $('hDerece').textContent = Math.round(c.temperature_2m) + '°';
     $('dsTemp').textContent = Math.round(c.temperature_2m) + '°';
+    $('dsIkon').innerHTML = ikon(c.weather_code, c.is_day);
     $('hDurum').textContent = (HAVA[c.weather_code] || '') + ' · ' + (h._ad || '');
     var gd = d.sunrise[0] ? d.sunrise[0].slice(11, 16) : '', gb = d.sunset[0] ? d.sunset[0].slice(11, 16) : '';
     $('hYan').innerHTML = 'Gefühlt <b>' + Math.round(c.apparent_temperature) + '°</b><br>Wind <b>' + Math.round(c.wind_speed_10m) + ' km/h</b><br>Feuchte <b>' + c.relative_humidity_2m + ' %</b><br>' + gd + ' ↑ ' + gb + ' ↓';
-    var g = '';
+    var g = '', ds = '';
     for (var i = 0; i < d.time.length && i < 5; i++) {
       var t = yerelTarih(d.time[i]), yg = d.precipitation_probability_max[i];
+      ds += '<div class="ds-tag"><div class="ad">' + (i === 0 ? 'Heute' : GUN_K[t.getDay()]) + '</div><div class="ikon">' + ikon(d.weather_code[i], 1) + '</div>' +
+        Math.round(d.temperature_2m_max[i]) + '°<em>' + Math.round(d.temperature_2m_min[i]) + '°</em></div>';
       g += '<div class="gun"><div class="ad">' + (i === 0 ? 'Heute' : GUN_K[t.getDay()]) + '</div><div class="ikon">' + ikon(d.weather_code[i], 1) + '</div>' +
         '<div class="mm">' + Math.round(d.temperature_2m_max[i]) + '°<em>' + Math.round(d.temperature_2m_min[i]) + '°</em></div>' +
         '<div class="yagis">' + (yg >= 20 ? yg + ' %' : '') + '</div></div>';
     }
     $('hGunler').innerHTML = g;
+    $('dsTage').innerHTML = ds;
   }
 
   /* ---------- Fotoğraflar ---------- */
@@ -621,10 +644,12 @@ body.sadeceFoto #tamFoto{opacity:1}
   /* ---------- Başlat ---------- */
   function kurulumGoster() {
     $('kurulum').hidden = false; $('pano').style.opacity = .15;
+    $('kApi').value = API;
     $('kurulumForm').addEventListener('submit', function (e) {
       e.preventDefault();
-      LS.set('api', $('kApi').value.trim()); LS.set('k', $('kKey').value.trim()); LS.set('demo', false);
-      location.replace(location.pathname);
+      var k = $('kKey').value.trim();
+      LS.set('api', $('kApi').value.trim()); LS.set('k', k); LS.set('demo', false); keksSetzen(k);
+      location.replace(location.pathname + '?k=' + encodeURIComponent(k));
     });
     $('kDemo').addEventListener('click', function () { LS.set('demo', true); location.replace(location.pathname); });
   }
