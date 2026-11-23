@@ -36,6 +36,13 @@ function einrichten() {
   SpreadsheetApp.getUi().alert('Einrichtung fertig. Den Token im Blatt "Einstellungen" notieren.');
 }
 
+/** Einmal im Editor ausführen, wenn neue Rechte nötig sind (z. B. Fotos hochladen/löschen). */
+function berechtigungenErteilen() {
+  DriveApp.getRootFolder();
+  CalendarApp.getDefaultCalendar();
+  Logger.log('Berechtigungen sind erteilt.');
+}
+
 function doGet(e) {
   var p = (e && e.parameter) || {};
   var einst = einstellungenLesen();
@@ -109,6 +116,7 @@ function doPost(e) {
         if (n in body.anzeige) einstellungSetzen('zeige_' + n, body.anzeige[n] === true, 'Auf dem Pano anzeigen (Admin-Seite).');
       });
     }
+    if (body.modus === 'standard' || body.modus === 'diashow') einstellungSetzen('modus', body.modus, 'Ansicht: standard oder diashow (Admin-Seite).');
     if (Array.isArray(body.radio)) einstellungSetzen('radio', JSON.stringify(radioPruefen(body.radio)), 'Radiosender (Admin-Seite).');
     if (body.layout) einstellungSetzen('layout', JSON.stringify(layoutPruefen(body.layout)), 'Anordnung (Admin-Seite).');
     if (typeof body.stadt === 'string') einstellungSetzen('stadt', body.stadt.trim().slice(0, 80));
@@ -174,6 +182,7 @@ function daten(einst) {
   return {
     zaman: new Date().toISOString(),
     anzeige: anzeige,
+    modus: einst.modus === 'diashow' ? 'diashow' : 'standard',
     layout: layoutLesen(einst),
     radio: radioLesen(einst),
     sehir: einst.stadt || '',

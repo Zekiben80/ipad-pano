@@ -66,6 +66,20 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .fuss{text-align:center;color:var(--cok-soluk);font-size:13px;line-height:1.5}
 .fuss a{color:var(--soluk)}
 
+/* Ansicht */
+.modi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modus{font:inherit;color:var(--metin);text-align:left;padding:10px;border-radius:18px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);transition:border-color .2s,background .2s}
+.modus.aktiv{border-color:var(--yesil);background:rgba(95,212,154,.12);box-shadow:0 0 0 1px var(--yesil)}
+.modus b{display:block;font-size:16px;margin-top:9px}
+.modus small{display:block;font-size:12px;color:var(--soluk);margin-top:2px}
+.m-bild{position:relative;display:block;aspect-ratio:4/3;border-radius:11px;overflow:hidden;background:#141a26}
+.m-standard{display:grid;grid-template-columns:1.2fr 1fr;grid-template-rows:1fr 1fr;gap:4px;padding:5px}
+.m-standard i{border-radius:5px;background:rgba(255,255,255,.18)}
+.m-standard i:first-child{grid-row:span 2;background:linear-gradient(160deg,#6fa3d8,#2f5d8a)}
+.m-dia{background:linear-gradient(160deg,#87b7e6 0%,#3f78ad 55%,#5a7a4a 100%)}
+.m-dia em{position:absolute;bottom:5px;font-style:normal;font-size:13px;font-weight:300;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.m-dia em:first-child{left:7px}.m-dia em:last-child{right:7px}
+
 /* Anordnung */
 .spalten{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .spalte-titel{font-size:12px;color:var(--cok-soluk);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
@@ -113,6 +127,14 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
   </form>
 
   <div id="inhalt" hidden>
+    <section class="cam" style="margin-bottom:16px">
+      <h2>Ansicht</h2>
+      <div class="modi" id="modi">
+        <button type="button" class="modus" data-m="standard"><span class="m-bild m-standard"><i></i><i></i><i></i></span><b>Standard</b><small>Uhr, Wetter, Kalender …</small></button>
+        <button type="button" class="modus" data-m="diashow"><span class="m-bild m-dia"><em>12:30</em><em>3°</em></span><b>Diashow</b><small>Fotos im Vollbild</small></button>
+      </div>
+    </section>
+
     <section class="cam" style="margin-bottom:16px">
       <h2>Auf dem Pano anzeigen</h2>
       <div id="schalter"></div>
@@ -284,10 +306,21 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     }).join('') : '<div class="leer">Noch keine Countdowns</div>';
 
     if (document.activeElement !== $('stadt')) $('stadt').value = daten.sehir || '';
+    Array.prototype.forEach.call(document.querySelectorAll('.modus'), function (b) {
+      var an = b.getAttribute('data-m') === (daten.modus || 'standard');
+      b.classList.toggle('aktiv', an); b.setAttribute('aria-pressed', an);
+    });
     anordnungZeigen();
     senderZeigen();
     galerieZeigen();
   }
+
+  $('modi').addEventListener('click', function (e) {
+    var b = e.target.closest('.modus'); if (!b || laeuft) return;
+    var m = b.getAttribute('data-m'); if (m === (daten.modus || 'standard')) return;
+    daten.modus = m; zeigen();
+    senden({ modus: m }, m === 'diashow' ? 'Diashow aktiviert' : 'Standard-Ansicht aktiviert');
+  });
 
   /* ---------- Radio ---------- */
   function senderHolen() {

@@ -45,6 +45,22 @@ body.gece .foto{opacity:0!important}
 .radio.spielt .eq{display:flex}
 @keyframes eq{from{height:4px}to{height:20px}}
 
+/* Diashow: Foto vollflächig, Uhr unten links, Temperatur unten rechts */
+#ds{display:none;position:fixed;inset:0;z-index:6;pointer-events:none;align-items:flex-end;justify-content:space-between;
+  padding:0 calc(34px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(34px + env(safe-area-inset-left));
+  background:linear-gradient(0deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.18) 26%,rgba(0,0,0,0) 45%)}
+body.diashow #ds{display:flex}
+.ds-saat{font-size:min(13vw,112px);font-weight:200;line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums;text-shadow:0 2px 24px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.4)}
+.ds-tarih{font-size:20px;font-weight:500;margin-top:8px;color:rgba(255,255,255,.88);text-shadow:0 1px 10px rgba(0,0,0,.6)}
+.ds-temp{font-size:min(9vw,72px);font-weight:300;line-height:1;letter-spacing:-.03em;text-shadow:0 2px 24px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.4)}
+body.diashow #pano [data-w]:not(.cerceve){display:none!important}
+html body.diashow .sol,html body.diashow .sag{display:block!important}
+body.diashow .cerceve{display:block;position:fixed;inset:0;z-index:-1;border:0;border-radius:0;box-shadow:none;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+body.diashow .cerceve::before{display:none}
+body.diashow .cerceve::after{box-shadow:none;background:none}
+body.diashow #karart{background:none}
+body.diashow #durum{opacity:.5}
+
 /* Bereiche ein-/ausblenden (Admin-Seite) */
 body.ohne-radio .radio,body.ohne-wetter .hava,body.ohne-kalender .takvim,body.ohne-countdown .sayimlar,body.links-leer .sol,body.rechts-leer .sag{display:none!important}
 body.links-leer #pano,body.rechts-leer #pano{grid-template-columns:1fr}
@@ -203,6 +219,10 @@ body.sadeceFoto #tamFoto{opacity:1}
   </section>
 </main>
 
+<div id="ds" aria-hidden="true">
+  <div class="ds-uhr"><div class="ds-saat" id="dsSaat">--:--</div><div class="ds-tarih" id="dsTarih"></div></div>
+  <div class="ds-temp" id="dsTemp"></div>
+</div>
 <audio id="audio" preload="none" playsinline></audio>
 <div id="durum"></div>
 
@@ -275,6 +295,8 @@ body.sadeceFoto #tamFoto{opacity:1}
     var d = new Date();
     $('saat').textContent = saatYaz(d);
     $('tarih').innerHTML = esc(GUN[d.getDay()]) + ' <span>' + d.getDate() + '. ' + AY[d.getMonth()] + '</span>';
+    $('dsSaat').textContent = $('saat').textContent;
+    $('dsTarih').textContent = GUN[d.getDay()] + ', ' + d.getDate() + '. ' + AY[d.getMonth()];
     var gece = (d.getHours() >= AYAR.geceBas || d.getHours() < AYAR.geceBit) && Date.now() > uyanikBitis;
     document.body.classList.toggle('gece', gece);
     if (d.getDate() !== sonGun) { sonGun = d.getDate(); ciz(); }
@@ -303,6 +325,8 @@ body.sadeceFoto #tamFoto{opacity:1}
 
   function anzeigeAnwenden() {
     var a = veri.anzeige || {}, b = document.body.classList;
+    var dia = veri.modus === 'diashow';
+    if (dia !== b.contains('diashow')) { b.toggle('diashow', dia); b.remove('sadeceFoto'); fotoAnahtar = null; fotolarHazirla(); }
     ['kalender', 'wetter', 'fotos', 'countdown', 'radio'].forEach(function (n) { b.toggle('ohne-' + n, a[n] === false); });
     if (a.radio === false && radioAn) radioStop();
     radioZeigen();
@@ -445,6 +469,7 @@ body.sadeceFoto #tamFoto{opacity:1}
     var c = h.current, d = h.daily;
     $('hIkon').innerHTML = ikon(c.weather_code, c.is_day);
     $('hDerece').textContent = Math.round(c.temperature_2m) + '°';
+    $('dsTemp').textContent = Math.round(c.temperature_2m) + '°';
     $('hDurum').textContent = (HAVA[c.weather_code] || '') + ' · ' + (h._ad || '');
     var gd = d.sunrise[0] ? d.sunrise[0].slice(11, 16) : '', gb = d.sunset[0] ? d.sunset[0].slice(11, 16) : '';
     $('hYan').innerHTML = 'Gefühlt <b>' + Math.round(c.apparent_temperature) + '°</b><br>Wind <b>' + Math.round(c.wind_speed_10m) + ' km/h</b><br>Feuchte <b>' + c.relative_humidity_2m + ' %</b><br>' + gd + ' ↑ ' + gb + ' ↓';
@@ -461,7 +486,9 @@ body.sadeceFoto #tamFoto{opacity:1}
   /* ---------- Fotoğraflar ---------- */
   var fotoSira = [], fotoIdx = -1, aktif = 'fA', fotoZamanlayici = null, fotoAnahtar = '';
   function fotolarHazirla() {
-    var list = veri.anzeige && veri.anzeige.fotos === false ? [] : (veri.fotolar || []).slice();
+    // In der Diashow werden Fotos immer gezeigt, auch wenn "Fotos" im Standard-Modus aus ist.
+    var aus = veri.anzeige && veri.anzeige.fotos === false && veri.modus !== 'diashow';
+    var list = aus ? [] : (veri.fotolar || []).slice();
     var anahtar = list.join(',');
     if (anahtar === fotoAnahtar) return;
     fotoAnahtar = anahtar;
@@ -556,7 +583,7 @@ body.sadeceFoto #tamFoto{opacity:1}
   document.addEventListener('click', function (ev) {
     if (!$('kurulum').hidden) return;
     if (document.body.classList.contains('gece')) { uyanikBitis = Date.now() + 60000; document.body.classList.remove('gece'); return; }
-    if (!fotoSira.length) return;
+    if (!fotoSira.length || document.body.classList.contains('diashow')) return;
     $('tamFoto').style.backgroundImage = $(aktif).style.backgroundImage;
     var b = document.body.classList.toggle('sadeceFoto');
     clearTimeout(sadeceFotoZ);
@@ -576,6 +603,7 @@ body.sadeceFoto #tamFoto{opacity:1}
     var lay = null; try { lay = JSON.parse(q.get('lay')); } catch (e) {}
     return {
       layout: lay || undefined,
+      modus: q.get('modus') || 'standard',
       sehir: 'Köln',
       etkinlikler: [
         { t: 'Sellbird Teammeeting', g: false, b: t(0, s.getHours(), 0), s: t(0, s.getHours() + 1, 0), r: '#7aa2ff' },
