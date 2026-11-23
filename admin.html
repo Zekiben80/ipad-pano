@@ -230,6 +230,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     location.replace(location.pathname);
   });
 
+  $('eApi').value = API || ''; $('eKey').value = KEY || '';
   if (!API || !KEY) { $('einrichten').hidden = false; $('status').textContent = 'Einmalig einrichten'; return; }
   laden().then(function () { $('inhalt').hidden = false; }).catch(function (e) {
     $('status').textContent = 'Keine Verbindung: ' + e.message;
