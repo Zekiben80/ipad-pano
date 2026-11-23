@@ -1,109 +1,108 @@
 /**
- * iPad Pano: veri servisi (Google Apps Script, Google Tablosuna bağlı).
- * Verir: Google Takvim etkinlikleri, Notlar, Geri sayımlar, Drive klasöründeki fotoğraflar.
- * Kurulum adımları: KURULUM.md
+ * iPad Pano: Datendienst (Google Apps Script, an eine Google-Tabelle gebunden).
+ * Liefert: Google-Kalender-Termine, Notizen, Countdowns, Fotos aus einem Drive-Ordner.
  */
 
-var SAYFA = { notlar: 'Notlar', sayim: 'GeriSayim', ayar: 'Ayarlar' };
+var BLATT = { notizen: 'Notizen', countdown: 'Countdown', einst: 'Einstellungen' };
 
-/** Bir kez elle çalıştır: sayfaları ve anahtarı oluşturur. */
-function kurulum() {
+/** Einmal manuell ausführen: legt die Blätter und den Token an. */
+function einrichten() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  var n = sayfaAl(ss, SAYFA.notlar);
+  var n = blattHolen(ss, BLATT.notizen);
   if (n.getLastRow() === 0) {
-    n.getRange(1, 1, 3, 2).setValues([['Not', 'Bitti'], ['Örnek not', false], ['İkinci not', false]]);
+    n.getRange(1, 1, 3, 2).setValues([['Notiz', 'Erledigt'], ['Beispielnotiz', false], ['Zweite Notiz', false]]);
     n.getRange('B2:B200').insertCheckboxes();
   }
 
-  var s = sayfaAl(ss, SAYFA.sayim);
-  if (s.getLastRow() === 0) {
-    s.getRange(1, 1, 2, 3).setValues([['Ad', 'Tarih', 'Her yıl'], ['Yılbaşı', new Date(new Date().getFullYear(), 11, 31), true]]);
-    s.getRange('B2:B200').setNumberFormat('dd.MM.yyyy');
-    s.getRange('C2:C200').insertCheckboxes();
+  var c = blattHolen(ss, BLATT.countdown);
+  if (c.getLastRow() === 0) {
+    c.getRange(1, 1, 2, 3).setValues([['Name', 'Datum', 'Jährlich'], ['Silvester', new Date(new Date().getFullYear(), 11, 31), true]]);
+    c.getRange('B2:B200').setNumberFormat('dd.MM.yyyy');
+    c.getRange('C2:C200').insertCheckboxes();
   }
 
-  var a = sayfaAl(ss, SAYFA.ayar);
-  if (a.getLastRow() === 0) {
-    a.getRange(1, 1, 6, 3).setValues([
-      ['Anahtar', 'Değer', 'Açıklama'],
-      ['token', Utilities.getUuid().replace(/-/g, ''), 'Gizli anahtar. iPad kurulumunda girilir.'],
-      ['sehir', '', 'Hava durumu için şehir (ör. Köln). Boşsa iPad konumu kullanılır.'],
-      ['foto_klasor_id', '', 'Google Drive klasör kimliği (adres çubuğunda /folders/ sonrası).'],
-      ['takvimler', '', 'Virgülle takvim kimlikleri. Boşsa tüm görünür takvimler.'],
-      ['gun_sayisi', 14, 'Kaç gün ilerisi gösterilsin.']
+  var e = blattHolen(ss, BLATT.einst);
+  if (e.getLastRow() === 0) {
+    e.getRange(1, 1, 6, 3).setValues([
+      ['Schlüssel', 'Wert', 'Erklärung'],
+      ['token', Utilities.getUuid().replace(/-/g, ''), 'Geheimer Schlüssel. Wird bei der iPad-Einrichtung eingegeben.'],
+      ['stadt', '', 'Stadt für das Wetter (z. B. Köln). Leer = Standort des iPads.'],
+      ['foto_ordner_id', '', 'ID des Google-Drive-Ordners (in der Adresse nach /folders/).'],
+      ['kalender', '', 'Kalender-IDs, mit Komma getrennt. Leer = alle sichtbaren Kalender.'],
+      ['tage', 14, 'Wie viele Tage im Voraus angezeigt werden.']
     ]);
   }
-  SpreadsheetApp.getUi().alert('Kurulum tamam. Ayarlar sayfasındaki token değerini not al.');
+  SpreadsheetApp.getUi().alert('Einrichtung fertig. Den Token im Blatt "Einstellungen" notieren.');
 }
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
-  var ayar = ayarlariOku();
-  if (!ayar.token || p.k !== ayar.token) return json({ hata: 'yetki' });
+  var einst = einstellungenLesen();
+  if (!einst.token || p.k !== einst.token) return json({ hata: 'yetki' });
   try {
-    if (p.foto) return json(fotoGetir(p.foto, ayar));
-    return json(veri(ayar));
+    if (p.foto) return json(fotoHolen(p.foto, einst));
+    return json(daten(einst));
   } catch (err) {
     return json({ hata: String(err) });
   }
 }
 
-function veri(ayar) {
+function daten(einst) {
   return {
     zaman: new Date().toISOString(),
-    sehir: ayar.sehir || '',
-    etkinlikler: etkinlikler(ayar),
-    notlar: notlar(),
-    sayimlar: sayimlar(),
-    fotolar: fotoListesi(ayar)
+    sehir: einst.stadt || '',
+    etkinlikler: termine(einst),
+    notlar: notizen(),
+    sayimlar: countdowns(),
+    fotolar: fotoListe(einst)
   };
 }
 
-function etkinlikler(ayar) {
+function termine(einst) {
   var tz = Session.getScriptTimeZone();
-  var bas = new Date(); bas.setHours(0, 0, 0, 0);
-  var gun = Number(ayar.gun_sayisi) || 14;
-  var bit = new Date(bas.getTime() + gun * 864e5);
+  var start = new Date(); start.setHours(0, 0, 0, 0);
+  var tage = Number(einst.tage) || 14;
+  var ende = new Date(start.getTime() + tage * 864e5);
 
-  var takvimler;
-  if (ayar.takvimler) {
-    takvimler = String(ayar.takvimler).split(',').map(function (id) {
+  var kalender;
+  if (einst.kalender) {
+    kalender = String(einst.kalender).split(',').map(function (id) {
       return CalendarApp.getCalendarById(id.trim());
     }).filter(Boolean);
   } else {
-    takvimler = CalendarApp.getAllCalendars().filter(function (c) { return !c.isHidden(); });
+    kalender = CalendarApp.getAllCalendars().filter(function (k) { return !k.isHidden(); });
   }
 
-  var sonuc = [];
-  takvimler.forEach(function (c) {
-    var renk = c.getColor();
-    c.getEvents(bas, bit).forEach(function (ev) {
-      var tumGun = ev.isAllDayEvent();
-      sonuc.push({
-        t: ev.getTitle() || '(Başlıksız)',
-        g: tumGun,
-        b: tumGun ? Utilities.formatDate(ev.getAllDayStartDate(), tz, 'yyyy-MM-dd') : ev.getStartTime().toISOString(),
-        s: tumGun ? Utilities.formatDate(ev.getAllDayEndDate(), tz, 'yyyy-MM-dd') : ev.getEndTime().toISOString(),
-        r: renk
+  var liste = [];
+  kalender.forEach(function (k) {
+    var farbe = k.getColor();
+    k.getEvents(start, ende).forEach(function (ev) {
+      var ganz = ev.isAllDayEvent();
+      liste.push({
+        t: ev.getTitle() || '(Ohne Titel)',
+        g: ganz,
+        b: ganz ? Utilities.formatDate(ev.getAllDayStartDate(), tz, 'yyyy-MM-dd') : ev.getStartTime().toISOString(),
+        s: ganz ? Utilities.formatDate(ev.getAllDayEndDate(), tz, 'yyyy-MM-dd') : ev.getEndTime().toISOString(),
+        r: farbe
       });
     });
   });
-  sonuc.sort(function (x, y) { return x.b < y.b ? -1 : x.b > y.b ? 1 : 0; });
-  return sonuc.slice(0, 60);
+  liste.sort(function (x, y) { return x.b < y.b ? -1 : x.b > y.b ? 1 : 0; });
+  return liste.slice(0, 60);
 }
 
-function notlar() {
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SAYFA.notlar);
+function notizen() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(BLATT.notizen);
   if (!sh || sh.getLastRow() < 2) return [];
   return sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues()
     .filter(function (r) { return String(r[0]).trim() !== '' && r[1] !== true; })
     .map(function (r) { return String(r[0]).trim(); });
 }
 
-function sayimlar() {
+function countdowns() {
   var tz = Session.getScriptTimeZone();
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SAYFA.sayim);
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(BLATT.countdown);
   if (!sh || sh.getLastRow() < 2) return [];
   return sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues()
     .filter(function (r) { return String(r[0]).trim() !== '' && r[1] instanceof Date; })
@@ -112,43 +111,43 @@ function sayimlar() {
     });
 }
 
-function fotoListesi(ayar) {
-  if (!ayar.foto_klasor_id) return [];
+function fotoListe(einst) {
+  if (!einst.foto_ordner_id) return [];
   var cache = CacheService.getScriptCache();
-  var anahtar = 'fotolar_' + ayar.foto_klasor_id;
-  var kayit = cache.get(anahtar);
-  if (kayit) return JSON.parse(kayit);
+  var schl = 'fotos_' + einst.foto_ordner_id;
+  var gespeichert = cache.get(schl);
+  if (gespeichert) return JSON.parse(gespeichert);
 
   var ids = [];
-  var it = DriveApp.getFolderById(ayar.foto_klasor_id).getFiles();
+  var it = DriveApp.getFolderById(einst.foto_ordner_id).getFiles();
   while (it.hasNext() && ids.length < 300) {
     var f = it.next();
     if (/^image\//.test(f.getMimeType())) ids.push(f.getId());
   }
-  cache.put(anahtar, JSON.stringify(ids), 600);
+  cache.put(schl, JSON.stringify(ids), 600);
   return ids;
 }
 
-/** Yalnızca ayarlı klasördeki bir fotoğrafı, ~1600 px küçültülmüş olarak verir. */
-function fotoGetir(id, ayar) {
-  if (fotoListesi(ayar).indexOf(id) === -1) return { hata: 'foto' };
-  var yetki = { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() };
+/** Liefert nur Fotos aus dem eingestellten Ordner, verkleinert auf ca. 1600 px. */
+function fotoHolen(id, einst) {
+  if (fotoListe(einst).indexOf(id) === -1) return { hata: 'foto' };
+  var auth = { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() };
   var blob = null;
   try {
     var meta = JSON.parse(UrlFetchApp.fetch(
-      'https://www.googleapis.com/drive/v3/files/' + id + '?fields=thumbnailLink', { headers: yetki }
+      'https://www.googleapis.com/drive/v3/files/' + id + '?fields=thumbnailLink', { headers: auth }
     ).getContentText());
     if (meta.thumbnailLink) {
-      var r = UrlFetchApp.fetch(meta.thumbnailLink.replace(/=s\d+$/, '=s1600'), { headers: yetki, muteHttpExceptions: true });
+      var r = UrlFetchApp.fetch(meta.thumbnailLink.replace(/=s\d+$/, '=s1600'), { headers: auth, muteHttpExceptions: true });
       if (r.getResponseCode() === 200) blob = r.getBlob();
     }
-  } catch (e) { /* küçük resim yoksa asıl dosyaya düş */ }
+  } catch (e) { /* ohne Vorschaubild: Originaldatei */ }
   if (!blob) blob = DriveApp.getFileById(id).getBlob();
   return { mime: blob.getContentType() || 'image/jpeg', data: Utilities.base64Encode(blob.getBytes()) };
 }
 
-function ayarlariOku() {
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SAYFA.ayar);
+function einstellungenLesen() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(BLATT.einst);
   var o = {};
   if (!sh || sh.getLastRow() < 2) return o;
   sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues().forEach(function (r) {
@@ -157,7 +156,7 @@ function ayarlariOku() {
   return o;
 }
 
-function sayfaAl(ss, ad) { return ss.getSheetByName(ad) || ss.insertSheet(ad); }
+function blattHolen(ss, name) { return ss.getSheetByName(name) || ss.insertSheet(name); }
 
 function json(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);

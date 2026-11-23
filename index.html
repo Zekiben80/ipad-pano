@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -146,7 +146,7 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
     <div class="cam hava">
       <div class="hava-ust">
         <div class="ikon" id="hIkon"></div>
-        <div><div class="derece" id="hDerece">--°</div><div class="durum" id="hDurum">Hava durumu yükleniyor</div></div>
+        <div><div class="derece" id="hDerece">--°</div><div class="durum" id="hDurum">Wetter wird geladen</div></div>
         <div class="hava-yan" id="hYan"></div>
       </div>
       <div class="gunler" id="hGunler"></div>
@@ -154,12 +154,12 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
   </section>
   <section class="sag">
     <div class="cam takvim">
-      <div class="ay-ust"><div class="baslik" id="ayAdi">Takvim</div></div>
+      <div class="ay-ust"><div class="baslik" id="ayAdi">Kalender</div></div>
       <div class="ay" id="ay"></div>
       <ul class="liste" id="etkinlikler"></ul>
     </div>
     <div class="cam notlar">
-      <div class="baslik">Notlar</div>
+      <div class="baslik">Notizen</div>
       <ul id="notlar"></ul>
     </div>
   </section>
@@ -169,15 +169,15 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
 
 <div id="kurulum" hidden>
   <form class="cam" id="kurulumForm" autocomplete="off">
-    <h1>Pano kurulumu</h1>
-    <p>Apps Script web uygulaması adresini ve Ayarlar sayfasındaki token değerini gir. Bilgiler yalnızca bu cihazda saklanır.</p>
-    <label for="kApi">Web uygulaması adresi</label>
+    <h1>Pano einrichten</h1>
+    <p>Adresse der Apps-Script-Web-App und den Token aus dem Blatt „Einstellungen“ eingeben. Die Daten bleiben nur auf diesem Gerät.</p>
+    <label for="kApi">Web-App-Adresse</label>
     <input id="kApi" type="url" placeholder="https://script.google.com/macros/s/.../exec" required>
     <label for="kKey">Token</label>
     <input id="kKey" type="text" required>
     <div class="dugmeler">
       <button type="button" class="dugme ikincil" id="kDemo">Demo</button>
-      <button type="submit" class="dugme">Kaydet</button>
+      <button type="submit" class="dugme">Speichern</button>
     </div>
   </form>
 </div>
@@ -187,9 +187,9 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
   'use strict';
 
   var AYAR = { veriDk: 5, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
-  var GUN = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-  var GUN_K = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-  var AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  var GUN = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  var GUN_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+  var AY = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
   function $(id) { return document.getElementById(id); }
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -222,10 +222,10 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
   function gunFarki(d) { var b = new Date(d); b.setHours(0, 0, 0, 0); return Math.round((b - bugunGece()) / 864e5); }
   function gunEtiketi(d) {
     var f = gunFarki(d);
-    if (f <= 0) return 'Bugün';
-    if (f === 1) return 'Yarın';
+    if (f <= 0) return 'Heute';
+    if (f === 1) return 'Morgen';
     if (f < 7) return GUN[d.getDay()];
-    return d.getDate() + ' ' + AY[d.getMonth()];
+    return d.getDate() + '. ' + AY[d.getMonth()];
   }
   function saatYaz(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 
@@ -234,7 +234,7 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
   function saatGuncelle() {
     var d = new Date();
     $('saat').textContent = saatYaz(d);
-    $('tarih').innerHTML = esc(GUN[d.getDay()]) + ' <span>' + d.getDate() + ' ' + AY[d.getMonth()] + '</span>';
+    $('tarih').innerHTML = esc(GUN[d.getDay()]) + ' <span>' + d.getDate() + '. ' + AY[d.getMonth()] + '</span>';
     var gece = (d.getHours() >= AYAR.geceBas || d.getHours() < AYAR.geceBit) && Date.now() > uyanikBitis;
     document.body.classList.toggle('gece', gece);
     if (d.getDate() !== sonGun) { sonGun = d.getDate(); ciz(); }
@@ -245,15 +245,15 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
   var veri = LS.get('veri') || { etkinlikler: [], notlar: [], sayimlar: [], fotolar: [] };
 
   function veriYukle() {
-    if (DEMO) { veri = demoVeri(); ciz(); fotolarHazirla(); durum('Demo modu'); return Promise.resolve(); }
+    if (DEMO) { veri = demoVeri(); ciz(); fotolarHazirla(); durum('Demo-Modus'); return Promise.resolve(); }
     return getJSON(API + '?k=' + enc(KEY)).then(function (v) {
-      if (v.hata) throw new Error(v.hata === 'yetki' ? 'Token hatalı' : v.hata);
+      if (v.hata) throw new Error(v.hata === 'yetki' ? 'Token falsch' : v.hata);
       var eskiSehir = veri.sehir;
       veri = v; LS.set('veri', v);
       ciz(); fotolarHazirla();
       if (v.sehir !== eskiSehir) havaYukle(true);
-      durum('Güncellendi ' + saatYaz(new Date()));
-    }).catch(function (e) { durum('Bağlantı yok: ' + e.message, true); });
+      durum('Aktualisiert ' + saatYaz(new Date()));
+    }).catch(function (e) { durum('Keine Verbindung: ' + e.message, true); });
   }
 
   function durum(m, hata) { var el = $('durum'); el.textContent = m; el.className = hata ? 'hata' : ''; }
@@ -273,7 +273,7 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
       for (var i = 0; i < 40 && d <= son; i++) { dolu[d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate()] = 1; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); }
     });
     var ilk = new Date(y, m, 1), kayma = (ilk.getDay() + 6) % 7;
-    var h = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'].map(function (g) { return '<div class="gb">' + g + '</div>'; }).join('');
+    var h = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(function (g) { return '<div class="gb">' + g + '</div>'; }).join('');
     var satir = Math.ceil((kayma + new Date(y, m + 1, 0).getDate()) / 7);
     for (var i = 0; i < satir * 7; i++) {
       var d = new Date(y, m, 1 - kayma + i), c = 'g';
@@ -288,12 +288,12 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
   function etkinlikCiz() {
     var simdi = new Date();
     var list = (veri.etkinlikler || []).filter(function (e) { return etkinlikBitis(e) > simdi; }).slice(0, 8);
-    if (!list.length) { $('etkinlikler').innerHTML = '<li class="bos">Yaklaşan etkinlik yok</li>'; return; }
+    if (!list.length) { $('etkinlikler').innerHTML = '<li class="bos">Keine anstehenden Termine</li>'; return; }
     $('etkinlikler').innerHTML = list.map(function (e) {
       var b = etkinlikBaslangic(e), s = etkinlikBitis(e);
       var devam = !e.g && b <= simdi && s > simdi;
       var gunAd = gunEtiketi(b < simdi ? simdi : b);
-      var z = devam ? 'Şu an · ' + saatYaz(s) + "'e kadar" : gunAd + ' · ' + (e.g ? 'Tüm gün' : saatYaz(b) + '–' + saatYaz(s));
+      var z = devam ? 'Jetzt · bis ' + saatYaz(s) + ' Uhr' : gunAd + ' · ' + (e.g ? 'Ganztägig' : saatYaz(b) + '–' + saatYaz(s));
       return '<li class="etk' + (devam ? ' simdi' : '') + '"><span class="nokta" style="background:' + esc(e.r || '#8ab4ff') + ';color:' + esc(e.r || '#8ab4ff') + '"></span>' +
         '<div><div class="etk-ad">' + esc(e.t) + '</div><div class="etk-zaman">' + esc(z) + '</div></div></li>';
     }).join('');
@@ -301,7 +301,7 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
 
   function notCiz() {
     var n = (veri.notlar || []).slice(0, 10);
-    $('notlar').innerHTML = n.length ? n.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') : '<li class="bos" style="padding-left:0">Not yok</li>';
+    $('notlar').innerHTML = n.length ? n.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') : '<li class="bos" style="padding-left:0">Keine Notizen</li>';
   }
 
   function sayimCiz() {
@@ -312,18 +312,18 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
       return { ad: x.ad, gun: gunFarki(d) };
     }).filter(function (x) { return x.gun >= 0; }).sort(function (a, c) { return a.gun - c.gun; }).slice(0, 3);
     $('sayimlar').innerHTML = list.map(function (x) {
-      var sayi = x.gun === 0 ? '<b>Bugün</b>' : '<b>' + x.gun + '</b><i>gün</i>';
+      var sayi = x.gun === 0 ? '<b>Heute</b>' : '<b>' + x.gun + '</b><i>' + (x.gun === 1 ? 'Tag' : 'Tage') + '</i>';
       return '<div class="cam cip">' + sayi + '<span>' + esc(x.ad) + '</span></div>';
     }).join('');
   }
 
   /* ---------- Hava durumu (Open-Meteo, anahtarsız) ---------- */
   var HAVA = {
-    0: 'Açık', 1: 'Çoğunlukla açık', 2: 'Parçalı bulutlu', 3: 'Kapalı', 45: 'Sisli', 48: 'Kırağılı sis',
-    51: 'Hafif çisenti', 53: 'Çisenti', 55: 'Yoğun çisenti', 56: 'Donan çisenti', 57: 'Donan çisenti',
-    61: 'Hafif yağmur', 63: 'Yağmur', 65: 'Kuvvetli yağmur', 66: 'Donan yağmur', 67: 'Donan yağmur',
-    71: 'Hafif kar', 73: 'Kar', 75: 'Yoğun kar', 77: 'Kar taneleri', 80: 'Sağanak', 81: 'Sağanak', 82: 'Şiddetli sağanak',
-    85: 'Kar sağanağı', 86: 'Kar sağanağı', 95: 'Gök gürültülü fırtına', 96: 'Dolulu fırtına', 99: 'Dolulu fırtına'
+    0: 'Klar', 1: 'Überwiegend klar', 2: 'Teilweise bewölkt', 3: 'Bedeckt', 45: 'Nebel', 48: 'Reifnebel',
+    51: 'Leichter Niesel', 53: 'Niesel', 55: 'Starker Niesel', 56: 'Gefrierender Niesel', 57: 'Gefrierender Niesel',
+    61: 'Leichter Regen', 63: 'Regen', 65: 'Starker Regen', 66: 'Gefrierender Regen', 67: 'Gefrierender Regen',
+    71: 'Leichter Schnee', 73: 'Schnee', 75: 'Starker Schnee', 77: 'Schneegriesel', 80: 'Schauer', 81: 'Schauer', 82: 'Starke Schauer',
+    85: 'Schneeschauer', 86: 'Schneeschauer', 95: 'Gewitter', 96: 'Gewitter mit Hagel', 99: 'Gewitter mit Hagel'
   };
   var BULUT = '<path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 11 3.5 3.5 0 0 0 7 18z"/>';
   var BULUT_UST = '<path d="M7 14.5h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 7.5 3.5 3.5 0 0 0 7 14.5z"/>';
@@ -344,19 +344,19 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
     if (veri.sehir) {
       var kayit = LS.get('konum');
       if (kayit && kayit.sehir === veri.sehir) return Promise.resolve(kayit);
-      return getJSON('https://geocoding-api.open-meteo.com/v1/search?count=1&language=tr&name=' + enc(veri.sehir)).then(function (r) {
-        if (!r.results || !r.results.length) throw new Error('Şehir bulunamadı');
+      return getJSON('https://geocoding-api.open-meteo.com/v1/search?count=1&language=de&name=' + enc(veri.sehir)).then(function (r) {
+        if (!r.results || !r.results.length) throw new Error('Stadt nicht gefunden');
         var k = { sehir: veri.sehir, ad: r.results[0].name, lat: r.results[0].latitude, lon: r.results[0].longitude };
         LS.set('konum', k); return k;
       });
     }
     var eski = LS.get('konum');
     return new Promise(function (ok, red) {
-      if (!navigator.geolocation) { return eski ? ok(eski) : red(new Error('Konum yok')); }
+      if (!navigator.geolocation) { return eski ? ok(eski) : red(new Error('Kein Standort')); }
       navigator.geolocation.getCurrentPosition(function (p) {
-        var k = { sehir: '', ad: 'Konumum', lat: p.coords.latitude, lon: p.coords.longitude };
+        var k = { sehir: '', ad: 'Mein Standort', lat: p.coords.latitude, lon: p.coords.longitude };
         LS.set('konum', k); ok(k);
-      }, function () { eski ? ok(eski) : red(new Error('Konum izni yok')); }, { timeout: 15000, maximumAge: 36e5 });
+      }, function () { eski ? ok(eski) : red(new Error('Standort nicht freigegeben')); }, { timeout: 15000, maximumAge: 36e5 });
     });
   }
 
@@ -378,13 +378,13 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
     $('hDerece').textContent = Math.round(c.temperature_2m) + '°';
     $('hDurum').textContent = (HAVA[c.weather_code] || '') + ' · ' + (h._ad || '');
     var gd = d.sunrise[0] ? d.sunrise[0].slice(11, 16) : '', gb = d.sunset[0] ? d.sunset[0].slice(11, 16) : '';
-    $('hYan').innerHTML = 'Hissedilen <b>' + Math.round(c.apparent_temperature) + '°</b><br>Rüzgâr <b>' + Math.round(c.wind_speed_10m) + ' km/s</b><br>Nem <b>%' + c.relative_humidity_2m + '</b><br>' + gd + ' ↑ ' + gb + ' ↓';
+    $('hYan').innerHTML = 'Gefühlt <b>' + Math.round(c.apparent_temperature) + '°</b><br>Wind <b>' + Math.round(c.wind_speed_10m) + ' km/h</b><br>Feuchte <b>' + c.relative_humidity_2m + ' %</b><br>' + gd + ' ↑ ' + gb + ' ↓';
     var g = '';
     for (var i = 0; i < d.time.length && i < 5; i++) {
       var t = yerelTarih(d.time[i]), yg = d.precipitation_probability_max[i];
-      g += '<div class="gun"><div class="ad">' + (i === 0 ? 'Bugün' : GUN_K[t.getDay()]) + '</div><div class="ikon">' + ikon(d.weather_code[i], 1) + '</div>' +
+      g += '<div class="gun"><div class="ad">' + (i === 0 ? 'Heute' : GUN_K[t.getDay()]) + '</div><div class="ikon">' + ikon(d.weather_code[i], 1) + '</div>' +
         '<div class="mm">' + Math.round(d.temperature_2m_max[i]) + '°<em>' + Math.round(d.temperature_2m_min[i]) + '°</em></div>' +
-        '<div class="yagis">' + (yg >= 20 ? '%' + yg : '') + '</div></div>';
+        '<div class="yagis">' + (yg >= 20 ? yg + ' %' : '') + '</div></div>';
     }
     $('hGunler').innerHTML = g;
   }
@@ -448,14 +448,14 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
     return {
       sehir: 'Köln',
       etkinlikler: [
-        { t: 'Sellbird ekip toplantısı', g: false, b: t(0, s.getHours(), 0), s: t(0, s.getHours() + 1, 0), r: '#7aa2ff' },
-        { t: 'Lisi ile akşam yemeği', g: false, b: t(0, 19, 30), s: t(0, 21, 0), r: '#ff8fa3' },
-        { t: 'Vergi danışmanı', g: false, b: t(1, 10, 0), s: t(1, 11, 0), r: '#7ee0b5' },
-        { t: 'Tatil', g: true, b: g(3), s: g(6), r: '#ffd27a' },
-        { t: 'Dişçi randevusu', g: false, b: t(8, 14, 15), s: t(8, 15, 0), r: '#c7a6ff' }
+        { t: 'Sellbird Teammeeting', g: false, b: t(0, s.getHours(), 0), s: t(0, s.getHours() + 1, 0), r: '#7aa2ff' },
+        { t: 'Abendessen', g: false, b: t(0, 19, 30), s: t(0, 21, 0), r: '#ff8fa3' },
+        { t: 'Steuerberater', g: false, b: t(1, 10, 0), s: t(1, 11, 0), r: '#7ee0b5' },
+        { t: 'Urlaub', g: true, b: g(3), s: g(6), r: '#ffd27a' },
+        { t: 'Zahnarzt', g: false, b: t(8, 14, 15), s: t(8, 15, 0), r: '#c7a6ff' }
       ],
-      notlar: ['Kargo etiketlerini yazdır', 'Faturaları kontrol et', 'Annemi ara', 'iPad şarj kablosu al'],
-      sayimlar: [{ ad: 'Yılbaşı', tarih: s.getFullYear() + '-12-31', yillik: true }, { ad: 'Tatil', tarih: g(3), yillik: false }, { ad: 'Lisi doğum günü', tarih: g(19), yillik: true }],
+      notlar: ['Versandetiketten drucken', 'Rechnungen prüfen', 'Einkaufen: Milch, Brot', 'iPad-Ladekabel kaufen'],
+      sayimlar: [{ ad: 'Silvester', tarih: s.getFullYear() + '-12-31', yillik: true }, { ad: 'Urlaub', tarih: g(3), yillik: false }, { ad: 'Geburtstag', tarih: g(19), yillik: true }],
       fotolar: []
     };
   }
