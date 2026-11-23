@@ -41,7 +41,7 @@ function doGet(e) {
   var einst = einstellungenLesen();
   if (!einst.token || p.k !== einst.token) return json({ hata: 'yetki' });
   try {
-    if (p.foto) return json(fotoHolen(p.foto, einst));
+    if (p.foto) return json(fotoHolen(p.foto, einst, p.gr));
     return json(daten(einst));
   } catch (err) {
     return json({ hata: String(err) });
@@ -66,6 +66,8 @@ function doPost(e) {
     }
     if (typeof body.stadt === 'string') einstellungSetzen('stadt', body.stadt.trim().slice(0, 80));
     if (Array.isArray(body.countdowns)) countdownsSchreiben(body.countdowns);
+    if (body.fotoNeu) fotoSpeichern(body.fotoNeu, einst);
+    if (body.fotoLoeschen) fotoLoeschen(body.fotoLoeschen, einst);
     SpreadsheetApp.flush();
     return json(daten(einstellungenLesen()));
   } catch (err) {
@@ -84,6 +86,23 @@ function einstellungSetzen(name, wert, erklaerung) {
   if (i === -1) sh.getRange(zeile, 1, 1, 3).setValues([[name, '', erklaerung || '']]);
   if (typeof wert === 'boolean') sh.getRange(zeile, 2).insertCheckboxes();
   sh.getRange(zeile, 2).setValue(wert);
+}
+
+/** Foto von der Admin-Seite (Base64-JPEG, bereits verkleinert) im Foto-Ordner speichern. */
+function fotoSpeichern(foto, einst) {
+  if (!einst.foto_ordner_id) throw new Error('Kein Foto-Ordner eingestellt');
+  if (!foto.data || foto.data.length > 15e6) throw new Error('Foto ungültig oder zu groß');
+  var name = String(foto.name || 'Foto').replace(/[\\\/:*?"<>|]/g, '').slice(0, 80).replace(/\.\w+$/, '') + '.jpg';
+  var blob = Utilities.newBlob(Utilities.base64Decode(foto.data), 'image/jpeg', name);
+  DriveApp.getFolderById(einst.foto_ordner_id).createFile(blob);
+  CacheService.getScriptCache().remove('fotos_' + einst.foto_ordner_id);
+}
+
+/** Foto in den Drive-Papierkorb verschieben (dort 30 Tage wiederherstellbar). */
+function fotoLoeschen(id, einst) {
+  if (fotoListe(einst).indexOf(id) === -1) throw new Error('Foto nicht gefunden');
+  DriveApp.getFileById(id).setTrashed(true);
+  CacheService.getScriptCache().remove('fotos_' + einst.foto_ordner_id);
 }
 
 function countdownsSchreiben(liste) {
@@ -185,9 +204,11 @@ function fotoListe(einst) {
   return ids;
 }
 
-/** Liefert nur Fotos aus dem eingestellten Ordner, verkleinert auf ca. 1600 px. */
-function fotoHolen(id, einst) {
+/** Liefert nur Fotos aus dem eingestellten Ordner, verkleinert (Standard 1600 px, Vorschau z. B. 300 px). */
+function fotoHolen(id, einst, gr) {
   if (fotoListe(einst).indexOf(id) === -1) return { hata: 'foto' };
+  var groesse = Math.min(1600, Math.max(200, Number(gr) || 1600));
+  var vorschau = groesse < 1600;
   var auth = { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() };
   var blob = null;
   try {
@@ -195,10 +216,11 @@ function fotoHolen(id, einst) {
       'https://www.googleapis.com/drive/v3/files/' + id + '?fields=thumbnailLink', { headers: auth }
     ).getContentText());
     if (meta.thumbnailLink) {
-      var r = UrlFetchApp.fetch(meta.thumbnailLink.replace(/=s\d+$/, '=s1600'), { headers: auth, muteHttpExceptions: true });
+      var r = UrlFetchApp.fetch(meta.thumbnailLink.replace(/=s\d+$/, '=s' + groesse), { headers: auth, muteHttpExceptions: true });
       if (r.getResponseCode() === 200) blob = r.getBlob();
     }
   } catch (e) { /* ohne Vorschaubild: Originaldatei */ }
+  if (!blob && vorschau) return { hata: 'vorschau' };
   if (!blob) blob = DriveApp.getFileById(id).getBlob();
   return { mime: blob.getContentType() || 'image/jpeg', data: Utilities.base64Encode(blob.getBytes()) };
 }

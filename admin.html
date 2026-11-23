@@ -63,6 +63,14 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .fuss{text-align:center;color:var(--cok-soluk);font-size:13px;line-height:1.5}
 .fuss a{color:var(--soluk)}
 
+/* Fotos */
+.galerie{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bild{position:relative;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.07) center/cover no-repeat;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+.bild .loesch{position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:10px;font-size:17px;background:rgba(10,12,18,.65);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.hochladen{position:relative;overflow:hidden;text-align:center}
+.hochladen input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+#fotoInfo{font-size:13px;color:var(--soluk);margin-top:10px;min-height:18px}
+
 /* Meldung */
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;transition:opacity .25s,transform .25s;
   padding:12px 18px;border-radius:16px;font-size:15px;font-weight:500;background:rgba(20,26,38,.85);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.15);pointer-events:none;white-space:nowrap}
@@ -105,6 +113,15 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         </div>
         <button class="dugme" type="submit">Hinzufügen</button>
       </form>
+    </section>
+
+    <section class="cam" style="margin-bottom:16px">
+      <h2>Fotos</h2>
+      <div class="galerie" id="galerie"></div>
+      <label class="dugme hochladen" id="hochladenKnopf">Fotos hinzufügen
+        <input id="fotoDatei" type="file" accept="image/*" multiple>
+      </label>
+      <div id="fotoInfo"></div>
     </section>
 
     <section class="cam">
@@ -159,15 +176,21 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     });
   }
 
-  function senden(body, meldung) {
-    if (laeuft) return Promise.resolve();
-    laeuft = true; body.k = KEY;
+  function post(body) {
+    body.k = KEY;
     return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.hata) throw new Error(d.hata === 'yetki' ? 'Token falsch' : d.hata);
-        daten = d; zeigen(); toast(meldung || 'Gespeichert');
-      })
+        daten = d; return d;
+      });
+  }
+
+  function senden(body, meldung) {
+    if (laeuft) return Promise.resolve();
+    laeuft = true;
+    return post(body)
+      .then(function () { zeigen(); toast(meldung || 'Gespeichert'); })
       .catch(function (e) { toast('Fehler: ' + e.message, true); zeigen(); })
       .then(function () { laeuft = false; });
   }
@@ -197,7 +220,78 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     }).join('') : '<div class="leer">Noch keine Countdowns</div>';
 
     if (document.activeElement !== $('stadt')) $('stadt').value = daten.sehir || '';
+    galerieZeigen();
   }
+
+  /* ---------- Fotos ---------- */
+  var vorschau = {}, vorschauLaeuft = false;
+  function galerieZeigen() {
+    var ids = (daten.fotolar || []).slice(0, 60);
+    $('galerie').innerHTML = ids.length ? ids.map(function (id) {
+      var bg = vorschau[id] ? ' style="background-image:url(\'' + vorschau[id] + '\')"' : '';
+      return '<div class="bild" data-id="' + esc(id) + '"' + bg + '><button class="loesch" type="button" data-foto="' + esc(id) + '" aria-label="Foto löschen">×</button></div>';
+    }).join('') : '<div class="leer" style="grid-column:1/-1">Noch keine Fotos</div>';
+    vorschauLaden();
+  }
+  function vorschauLaden() {
+    if (vorschauLaeuft) return;
+    var id = (daten.fotolar || []).slice(0, 60).filter(function (x) { return !vorschau[x]; })[0];
+    if (!id) return;
+    vorschauLaeuft = true;
+    fetch(API + '?k=' + encodeURIComponent(KEY) + '&gr=300&foto=' + encodeURIComponent(id)).then(function (r) { return r.json(); })
+      .then(function (d) { vorschau[id] = d.data ? 'data:' + d.mime + ';base64,' + d.data : 'data:,'; })
+      .catch(function () { vorschau[id] = 'data:,'; })
+      .then(function () {
+        vorschauLaeuft = false;
+        var el = document.querySelector('.bild[data-id="' + id + '"]');
+        if (el && vorschau[id] !== 'data:,') el.style.backgroundImage = "url('" + vorschau[id] + "')";
+        vorschauLaden();
+      });
+  }
+
+  function verkleinern(datei) {
+    return new Promise(function (ok, fehler) {
+      var url = URL.createObjectURL(datei), img = new Image();
+      img.onload = function () {
+        var s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        ok(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); fehler(new Error('Bild nicht lesbar')); };
+      img.src = url;
+    });
+  }
+
+  $('fotoDatei').addEventListener('change', function () {
+    var dateien = Array.prototype.slice.call(this.files || []);
+    this.value = '';
+    if (!dateien.length || laeuft) return;
+    laeuft = true; $('hochladenKnopf').style.opacity = .5;
+    var fertig = 0, fehler = 0;
+    function naechste(i) {
+      if (i >= dateien.length) return Promise.resolve();
+      $('fotoInfo').textContent = 'Lade Foto ' + (i + 1) + ' von ' + dateien.length + ' hoch …';
+      return verkleinern(dateien[i])
+        .then(function (data) { return post({ fotoNeu: { name: dateien[i].name, data: data } }); })
+        .then(function () { fertig++; }, function () { fehler++; })
+        .then(function () { return naechste(i + 1); });
+    }
+    naechste(0).then(function () {
+      laeuft = false; $('hochladenKnopf').style.opacity = '';
+      $('fotoInfo').textContent = '';
+      zeigen();
+      toast(fehler ? fertig + ' hochgeladen, ' + fehler + ' fehlgeschlagen' : (fertig === 1 ? 'Foto hochgeladen' : fertig + ' Fotos hochgeladen'), fehler > 0);
+    });
+  });
+
+  $('galerie').addEventListener('click', function (e) {
+    var id = e.target.getAttribute('data-foto'); if (!id) return;
+    if (!confirm('Foto löschen? Es kommt in den Drive-Papierkorb.')) return;
+    senden({ fotoLoeschen: id }, 'Foto gelöscht');
+  });
 
   $('schalter').addEventListener('change', function (e) {
     var n = e.target.getAttribute('data-n'); if (!n) return;
