@@ -45,6 +45,9 @@ body.gece .foto{opacity:0!important}
 .radio.spielt .eq{display:flex}
 @keyframes eq{from{height:4px}to{height:20px}}
 
+/* Wettereffekt (Regen/Schnee) über allem, aber unter der Diashow-Schrift */
+#effekt{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;display:none}
+
 /* Diashow: Foto vollflächig, Uhr unten links, Temperatur unten rechts */
 #ds{display:none;position:fixed;inset:0;z-index:6;pointer-events:none;align-items:flex-end;justify-content:space-between;
   padding:0 calc(34px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(34px + env(safe-area-inset-left));
@@ -228,6 +231,7 @@ body.sadeceFoto #tamFoto{opacity:1}
   </section>
 </main>
 
+<canvas id="effekt" aria-hidden="true"></canvas>
 <div id="ds" aria-hidden="true">
   <div class="ds-uhr"><div class="ds-saat" id="dsSaat">--:--</div><div class="ds-tarih" id="dsTarih"></div></div>
   <div class="ds-rechts">
@@ -490,6 +494,7 @@ body.sadeceFoto #tamFoto{opacity:1}
     $('hDerece').textContent = Math.round(c.temperature_2m) + '°';
     $('dsTemp').textContent = Math.round(c.temperature_2m) + '°';
     $('dsIkon').innerHTML = ikon(c.weather_code, c.is_day);
+    effektSetzen(effektArt(c.weather_code));
     $('hDurum').textContent = (HAVA[c.weather_code] || '') + ' · ' + (h._ad || '');
     var gd = d.sunrise[0] ? d.sunrise[0].slice(11, 16) : '', gb = d.sunset[0] ? d.sunset[0].slice(11, 16) : '';
     $('hYan').innerHTML = 'Gefühlt <b>' + Math.round(c.apparent_temperature) + '°</b><br>Wind <b>' + Math.round(c.wind_speed_10m) + ' km/h</b><br>Feuchte <b>' + c.relative_humidity_2m + ' %</b><br>' + gd + ' ↑ ' + gb + ' ↓';
@@ -505,6 +510,68 @@ body.sadeceFoto #tamFoto{opacity:1}
     $('hGunler').innerHTML = g;
     $('dsTage').innerHTML = ds;
   }
+
+  /* ---------- Wettereffekt: Regen / Schnee (Canvas, ~30 fps, wenige Teilchen) ---------- */
+  var cv = $('effekt'), ctx = cv.getContext && cv.getContext('2d');
+  var effekt = { art: null, teile: [], raf: 0, letzte: 0 };
+  function effektArt(k) {
+    if ((k >= 71 && k <= 77) || k === 85 || k === 86) return 'schnee';
+    if ((k >= 51 && k <= 67) || (k >= 80 && k <= 82) || k >= 95) return 'regen';
+    return null;
+  }
+  function effektGroesse() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function neuesTeil(irgendwo) {
+    var w = innerWidth, h = innerHeight, r = Math.random;
+    if (effekt.art === 'regen') return { x: r() * w * 1.15 - w * 0.05, y: irgendwo ? r() * h : -30 - r() * 60, l: 14 + r() * 16, v: 750 + r() * 450 };
+    return { x: r() * w, y: irgendwo ? r() * h : -10 - r() * 40, g: 1.3 + r() * 2.7, v: 28 + r() * 46, p: r() * 6.28, s: 0.6 + r() * 1.2 };
+  }
+  function effektSetzen(art) {
+    if (!ctx) return;
+    var z = q.get('effekt'); if (z) art = z === 'aus' ? null : z;   // Vorschau: ?effekt=regen|schnee|aus
+    if (art === effekt.art) return;
+    effekt.art = art; cancelAnimationFrame(effekt.raf); effekt.teile = []; effekt.letzte = 0;
+    if (!art) { cv.style.display = 'none'; return; }
+    cv.style.display = 'block'; effektGroesse();
+    var n = art === 'regen' ? 110 : 70;
+    for (var i = 0; i < n; i++) effekt.teile.push(neuesTeil(true));
+    effekt.raf = requestAnimationFrame(effektSchritt);
+  }
+  function effektSchritt(t) {
+    effekt.raf = requestAnimationFrame(effektSchritt);
+    if (effekt.letzte && t - effekt.letzte < 32) return;
+    var dt = effekt.letzte ? Math.min(0.1, (t - effekt.letzte) / 1000) : 0;
+    effekt.letzte = t;
+    var w = innerWidth, h = innerHeight;
+    ctx.clearRect(0, 0, w, h);
+    if (document.body.classList.contains('gece') || document.hidden) return;
+    var i, p;
+    if (effekt.art === 'regen') {
+      ctx.strokeStyle = 'rgba(210,226,255,.5)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (i = 0; i < effekt.teile.length; i++) {
+        p = effekt.teile[i];
+        p.y += p.v * dt; p.x -= p.v * dt * 0.12;
+        if (p.y > h + 30) effekt.teile[i] = p = neuesTeil(false);
+        ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.l * 0.12, p.y - p.l);
+      }
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,.82)';
+      ctx.beginPath();
+      for (i = 0; i < effekt.teile.length; i++) {
+        p = effekt.teile[i];
+        p.p += dt * p.s; p.y += p.v * dt; p.x += Math.sin(p.p) * 18 * dt;
+        if (p.y > h + 10) effekt.teile[i] = p = neuesTeil(false);
+        ctx.moveTo(p.x + p.g, p.y); ctx.arc(p.x, p.y, p.g, 0, 6.283);
+      }
+      ctx.fill();
+    }
+  }
+  window.addEventListener('resize', function () { if (effekt.art) effektGroesse(); });
 
   /* ---------- Fotoğraflar ---------- */
   var fotoSira = [], fotoIdx = -1, aktif = 'fA', fotoZamanlayici = null, fotoAnahtar = '';
