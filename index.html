@@ -267,6 +267,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 (function () {
   'use strict';
 
+  var VERSION = '8';   // bei jeder Änderung zusammen mit version.json erhöhen
   var AYAR = { veriDk: 2, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
   var GUN = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   var GUN_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -348,7 +349,18 @@ body.sadeceFoto #tamFoto{opacity:1}
     }).catch(function (e) { durum('Keine Verbindung: ' + e.message, true); });
   }
 
-  function durum(m, hata) { var el = $('durum'); el.textContent = m; el.className = hata ? 'hata' : ''; }
+  function durum(m, hata) { var el = $('durum'); el.textContent = m + ' · v' + VERSION; el.className = hata ? 'hata' : ''; }
+
+  // Neue Version auf GitHub Pages? Dann neu laden (nicht während das Radio spielt).
+  function versionPruefen() {
+    if (DEMO) return;
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.v && String(j.v) !== VERSION && !radioAn) {
+        var p = new URLSearchParams(location.search); p.set('v', j.v);   // neuer Parameter umgeht den Browser-Cache
+        location.replace(location.pathname + '?' + p.toString());
+      }
+    }).catch(function () {});
+  }
 
   function ciz() { takvimCiz(); etkinlikCiz(); sayimCiz(); anzeigeAnwenden(); }
 
@@ -736,7 +748,8 @@ body.sadeceFoto #tamFoto{opacity:1}
   veriYukle().then(havaYukle);
   setInterval(veriYukle, AYAR.veriDk * 60000);
   setInterval(havaYukle, AYAR.havaDk * 60000);
-  setTimeout(function () { if (navigator.onLine !== false) location.reload(); }, AYAR.yenidenYukleSaat * 36e5);
+  setInterval(versionPruefen, 10 * 60000);
+  setTimeout(function () { if (navigator.onLine !== false && !radioAn) location.reload(); }, AYAR.yenidenYukleSaat * 36e5);
 })();
 </script>
 </body>
