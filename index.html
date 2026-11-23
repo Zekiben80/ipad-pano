@@ -28,7 +28,7 @@ ul{list-style:none}
 .foto::before{inset:-40px;background-size:cover;filter:blur(28px) brightness(.5) saturate(1.15)}
 .foto::after{inset:0;background-size:contain}
 /* Tablet quer + Hochformat-Foto: füllen statt kleiner Streifen; oben verankert, damit Köpfe sichtbar bleiben */
-@media (min-aspect-ratio:1/1){ .foto.hoch::after{background-size:cover;background-position:center 35%} }
+@media (min-aspect-ratio:1/1){ .foto.hoch::after{background-size:auto 150%;background-position:center 40%} }
 .foto.acik{opacity:1}
 #karart{position:fixed;inset:0;transition:opacity 1s,background 1s;
   background:linear-gradient(100deg,rgba(4,6,10,.66) 0%,rgba(4,6,10,.30) 52%,rgba(4,6,10,.58) 100%)}
@@ -288,7 +288,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 (function () {
   'use strict';
 
-  var VERSION = '10';   // bei jeder Änderung zusammen mit version.json erhöhen
+  var VERSION = '11';   // bei jeder Änderung zusammen mit version.json erhöhen
   var AYAR = { veriDk: 2, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
   var GUN = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   var GUN_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
