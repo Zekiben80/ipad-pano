@@ -28,10 +28,17 @@ ul{list-style:none}
   background:linear-gradient(100deg,rgba(4,6,10,.66) 0%,rgba(4,6,10,.30) 52%,rgba(4,6,10,.58) 100%)}
 body.gece #karart{background:rgba(0,0,0,.82)}
 body.gece .foto{opacity:0!important}
-body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
+/* Foto-Rahmen */
+.cerceve{display:none;flex:1;min-height:0;padding:0}
+body.fotoVar .cerceve{display:block}
+.cerceve .foto{z-index:1}
+.cerceve::after{content:"";position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 0 0 1px rgba(255,255,255,.12),inset 0 -40px 60px -30px rgba(0,0,0,.35)}
+#tamFoto{position:fixed;inset:0;z-index:8;background:#000 center/cover no-repeat;opacity:0;pointer-events:none;transition:opacity .8s}
+body.sadeceFoto #tamFoto{opacity:1}
 
 /* Yerleşim */
-#pano{position:fixed;inset:0;display:grid;grid-template-columns:1.22fr 1fr;gap:var(--bosluk);
+#pano{position:fixed;inset:0;isolation:isolate;display:grid;grid-template-columns:1.22fr 1fr;gap:var(--bosluk);
   padding:calc(var(--bosluk) + env(safe-area-inset-top)) calc(var(--bosluk) + env(safe-area-inset-right)) calc(var(--bosluk) + env(safe-area-inset-bottom)) calc(var(--bosluk) + env(safe-area-inset-left));
   transition:transform 4s ease,opacity .8s}
 .sol{display:flex;flex-direction:column;gap:18px;min-height:0}
@@ -125,6 +132,10 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
 /* Dikey */
 @media (max-aspect-ratio:1/1){
   #pano{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  /* Hochkant: zu wenig Platz für einen Rahmen, Foto wird zum Hintergrund */
+  body.fotoVar .cerceve{position:fixed;inset:0;z-index:-1;border:0;border-radius:0;box-shadow:none;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .cerceve::before{display:none}
+  .cerceve::after{box-shadow:none;background:rgba(4,6,10,.5)}
   .saat{font-size:min(30vw,190px)}
   .hava{margin-top:6px}
   .sag{flex-direction:row}
@@ -133,8 +144,9 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
 </style>
 </head>
 <body>
-<div id="bg"><div class="foto" id="fA"></div><div class="foto" id="fB"></div></div>
+<div id="bg"></div>
 <div id="karart"></div>
+<div id="tamFoto"></div>
 
 <main id="pano">
   <section class="sol">
@@ -143,6 +155,7 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
       <div class="tarih" id="tarih"></div>
     </div>
     <div class="sayimlar" id="sayimlar"></div>
+    <div class="cam cerceve" id="cerceve"><div class="foto" id="fA"></div><div class="foto" id="fB"></div></div>
     <div class="cam hava">
       <div class="hava-ust">
         <div class="ikon" id="hIkon"></div>
@@ -399,6 +412,7 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
     fotoAnahtar = anahtar;
     for (var i = list.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = list[i]; list[i] = list[j]; list[j] = t; }
     fotoSira = list; fotoIdx = -1;
+    document.body.classList.toggle('fotoVar', list.length > 0);
     clearInterval(fotoZamanlayici);
     if (!list.length) return;
     sonrakiFoto();
@@ -431,6 +445,7 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
     if (!$('kurulum').hidden) return;
     if (document.body.classList.contains('gece')) { uyanikBitis = Date.now() + 60000; document.body.classList.remove('gece'); return; }
     if (!fotoSira.length) return;
+    $('tamFoto').style.backgroundImage = $(aktif).style.backgroundImage;
     var b = document.body.classList.toggle('sadeceFoto');
     clearTimeout(sadeceFotoZ);
     if (b) sadeceFotoZ = setTimeout(function () { document.body.classList.remove('sadeceFoto'); }, 30000);
@@ -457,7 +472,7 @@ body.sadeceFoto #pano,body.sadeceFoto #karart,body.sadeceFoto #durum{opacity:0}
       ],
       notlar: ['Versandetiketten drucken', 'Rechnungen prüfen', 'Einkaufen: Milch, Brot', 'iPad-Ladekabel kaufen'],
       sayimlar: [{ ad: 'Silvester', tarih: s.getFullYear() + '-12-31', yillik: true }, { ad: 'Urlaub', tarih: g(3), yillik: false }, { ad: 'Geburtstag', tarih: g(19), yillik: true }],
-      fotolar: []
+      fotolar: ['https://picsum.photos/id/1015/1200/800', 'https://picsum.photos/id/1043/1200/800', 'https://picsum.photos/id/1067/1200/800']
     };
   }
 
