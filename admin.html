@@ -136,6 +136,12 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     </section>
 
     <section class="cam" style="margin-bottom:16px">
+      <h2>Dekoration</h2>
+      <div class="zeile" style="border:0;padding:0"><div class="ad">Weihnachtslichter<small>Lichterkette links und rechts am Rand</small></div>
+        <label class="sw"><input type="checkbox" id="dekoWeihnacht" aria-label="Weihnachtslichter"><span></span></label></div>
+    </section>
+
+    <section class="cam" style="margin-bottom:16px">
       <h2>Zeitplan</h2>
       <div class="zeile" style="border:0;padding-top:0"><div class="ad">Nur zu bestimmten Zeiten an<small>Sonst bleibt der Bildschirm schwarz</small></div>
         <label class="sw"><input type="checkbox" id="zAktiv" aria-label="Zeitplan aktiv"><span></span></label></div>
@@ -335,6 +341,9 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
       b.classList.toggle('aktiv', an); b.setAttribute('aria-pressed', an);
     });
     var o = daten.optionen || {};
+    var heute = new Date(), mo = heute.getMonth(), tg = heute.getDate();
+    var saison = mo === 11 || (mo === 10 && tg >= 25) || (mo === 0 && tg <= 6);
+    $('dekoWeihnacht').checked = o.deko_weihnacht === true || (o.deko_weihnacht === undefined && saison);
     $('zAktiv').checked = o.zeit_aktiv === true;
     if (document.activeElement !== $('zAn') && o.zeit_an) $('zAn').value = o.zeit_an;
     if (document.activeElement !== $('zAus') && o.zeit_aus) $('zAus').value = o.zeit_aus;
@@ -354,6 +363,11 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     { n: 'ds_tage', ad: '5-Tage-Vorhersage', info: 'Unter der Temperatur' },
     { n: 'ds_radio', ad: 'Radio', info: 'Kleine Leiste oben rechts' }
   ];
+  $('dekoWeihnacht').addEventListener('change', function () {
+    daten.optionen = daten.optionen || {}; daten.optionen.deko_weihnacht = this.checked;
+    senden({ optionen: { deko_weihnacht: this.checked } }, this.checked ? 'Weihnachtslichter an' : 'Weihnachtslichter aus');
+  });
+
   function zeitplanSenden(meldung) {
     var an = $('zAn').value, aus = $('zAus').value;
     if (!/^\d{2}:\d{2}$/.test(an) || !/^\d{2}:\d{2}$/.test(aus) || an === aus) { toast('Bitte zwei verschiedene Uhrzeiten wählen', true); return; }

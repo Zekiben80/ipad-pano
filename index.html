@@ -51,6 +51,20 @@ body.gece .foto{opacity:0!important}
 .radio.spielt .eq{display:flex}
 @keyframes eq{from{height:4px}to{height:20px}}
 
+/* Weihnachtslichter: schmale Lichterkette am linken und rechten Rand (innerhalb des 22-px-Randes) */
+.lichter{display:none;position:fixed;top:0;bottom:0;width:22px;z-index:4;pointer-events:none;transition:opacity 1.2s}
+#lichterL{left:0}#lichterR{right:0}
+body.deko .lichter{display:block}
+body.gece .lichter{opacity:.35}
+html body.aus .lichter{opacity:0}
+.lichter svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.lichter path{fill:none;stroke:rgba(20,40,25,.85);stroke-width:1.4}
+.birne{position:absolute;width:8px;height:13px;margin:-2px 0 0 -4px;transform-origin:50% 0}
+.birne::before{content:"";position:absolute;left:1px;top:0;width:6px;height:4px;border-radius:1px;background:#2b3a2e}
+.birne i{position:absolute;left:0;top:3px;width:8px;height:10px;border-radius:50% 50% 50% 50%/40% 40% 60% 60%;
+  background:var(--f);box-shadow:0 0 6px 2px var(--f),0 0 14px 4px var(--g);animation:funkeln var(--d) ease-in-out infinite;animation-delay:var(--v)}
+@keyframes funkeln{0%,100%{opacity:1}50%{opacity:.3}}
+
 /* Zeitplan: außerhalb der Zeit komplett schwarz (Tippen weckt 1 Minute) */
 #ds,#dsRadio,#effekt{transition:opacity 1.2s}
 html body.aus #pano,html body.aus #ds,html body.aus #dsRadio,html body.aus #effekt,html body.aus #durum{opacity:0!important;pointer-events:none}
@@ -258,6 +272,8 @@ body.sadeceFoto #tamFoto{opacity:1}
   </section>
 </main>
 
+<div class="lichter" id="lichterL" aria-hidden="true"></div>
+<div class="lichter" id="lichterR" aria-hidden="true"></div>
 <canvas id="effekt" aria-hidden="true"></canvas>
 <div id="ds" aria-hidden="true">
   <div class="ds-uhr"><div class="ds-saat" id="dsSaat">--:--</div><div class="ds-tarih" id="dsTarih"></div></div>
@@ -293,7 +309,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 (function () {
   'use strict';
 
-  var VERSION = '12';   // bei jeder Änderung zusammen mit version.json erhöhen
+  var VERSION = '13';   // bei jeder Änderung zusammen mit version.json erhöhen
   var AYAR = { veriDk: 2, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
   var GUN = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   var GUN_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -410,6 +426,7 @@ body.sadeceFoto #tamFoto{opacity:1}
     var dia = veri.modus === 'diashow';
     if (dia !== b.contains('diashow')) { b.toggle('diashow', dia); b.remove('sadeceFoto'); fotoAnahtar = null; fotolarHazirla(); }
     ['kalender', 'wetter', 'fotos', 'countdown', 'radio'].forEach(function (n) { b.toggle('ohne-' + n, a[n] === false); });
+    dekoAnwenden();
     var o = veri.optionen || {};
     ['uhr', 'wetter', 'tage', 'radio'].forEach(function (n) { b.toggle('ds-ohne-' + n, o['ds_' + n] === false); });
     var radioSichtbar = dia ? o.ds_radio !== false : a.radio !== false;
@@ -572,6 +589,37 @@ body.sadeceFoto #tamFoto{opacity:1}
     $('hGunler').innerHTML = g;
     $('dsTage').innerHTML = ds;
   }
+
+  /* ---------- Weihnachtslichter ---------- */
+  var LICHT_FARBEN = [['#ff4b4b', 'rgba(255,60,60,.45)'], ['#ffd45a', 'rgba(255,200,70,.45)'], ['#43d978', 'rgba(60,220,120,.4)'], ['#5aaeff', 'rgba(80,160,255,.45)']];
+  var lichterHoehe = 0;
+  function dekoSaison(d) { var m = d.getMonth(), t = d.getDate(); return m === 11 || (m === 10 && t >= 25) || (m === 0 && t <= 6); }
+  function dekoAnwenden() {
+    var o = veri.optionen || {};
+    var an = o.deko_weihnacht === true || (o.deko_weihnacht === undefined && dekoSaison(new Date()));
+    document.body.classList.toggle('deko', an);
+    if (an && lichterHoehe !== innerHeight) lichterBauen();
+  }
+  function lichterBauen() {
+    lichterHoehe = innerHeight;
+    var h = innerHeight, abstand = 46, n = Math.floor((h - 20) / abstand);
+    [['lichterL', 1], ['lichterR', -1]].forEach(function (s) {
+      var el = $(s[0]), innen = s[1];             // innen: Richtung zur Bildschirmmitte
+      var xw = innen > 0 ? 5 : 17;               // Kabel nahe am Rand
+      var d = 'M' + xw + ' -5';
+      for (var y = 0; y <= h + 20; y += 8) d += ' L' + (xw + Math.sin(y / abstand * Math.PI) * 3 * innen).toFixed(1) + ' ' + y;
+      var html = '<svg viewBox="0 0 22 ' + h + '" preserveAspectRatio="none"><path d="' + d + '"/></svg>';
+      for (var i = 0; i < n; i++) {
+        var y2 = 22 + i * abstand + (abstand / 2) * 0, x2 = xw + Math.sin(y2 / abstand * Math.PI) * 3 * innen;
+        var f = LICHT_FARBEN[(i + (innen > 0 ? 0 : 2)) % LICHT_FARBEN.length];
+        var winkel = innen > 0 ? -60 : 60;       // Birne hängt schräg nach innen
+        html += '<span class="birne" style="left:' + x2.toFixed(1) + 'px;top:' + y2 + 'px;transform:rotate(' + winkel + 'deg);--f:' + f[0] + ';--g:' + f[1] +
+          ';--d:' + (2 + (i % 3) * 0.7).toFixed(1) + 's;--v:-' + ((i * 0.37) % 2.4).toFixed(2) + 's"><i></i></span>';
+      }
+      el.innerHTML = html;
+    });
+  }
+  window.addEventListener('resize', function () { if (document.body.classList.contains('deko')) lichterBauen(); });
 
   /* ---------- Wettereffekt: Regen / Schnee (Canvas, ~30 fps, wenige Teilchen) ---------- */
   var cv = $('effekt'), ctx = cv.getContext && cv.getContext('2d');
@@ -762,7 +810,7 @@ body.sadeceFoto #tamFoto{opacity:1}
     return {
       layout: lay || undefined,
       modus: q.get('modus') || 'standard',
-      optionen: q.get('zeit') ? { zeit_aktiv: true, zeit_an: q.get('zeit').split('-')[0], zeit_aus: q.get('zeit').split('-')[1] } : {},
+      optionen: q.get('zeit') ? { zeit_aktiv: true, zeit_an: q.get('zeit').split('-')[0], zeit_aus: q.get('zeit').split('-')[1] } : (q.has('deko') ? { deko_weihnacht: q.get('deko') !== '0' } : {}),
       sehir: 'Köln',
       etkinlikler: [
         { t: 'Sellbird Teammeeting', g: false, b: t(0, s.getHours(), 0), s: t(0, s.getHours() + 1, 0), r: '#7aa2ff' },
