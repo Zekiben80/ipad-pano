@@ -28,12 +28,24 @@ ul{list-style:none}
 .foto::before{inset:-40px;background-size:cover;filter:blur(28px) brightness(.5) saturate(1.15)}
 .foto::after{inset:0;background-size:contain}
 /* Tablet quer + Hochformat-Foto: füllen statt kleiner Streifen; oben verankert, damit Köpfe sichtbar bleiben */
-@media (min-aspect-ratio:1/1){ .foto.hoch::after{background-size:auto 150%;background-position:center 40%} }
+@media (min-aspect-ratio:1/1){ .foto.hoch::after{background-size:cover;background-position:center 30%} }
 .foto.acik{opacity:1}
 #karart{position:fixed;inset:0;transition:opacity 1s,background 1s;
   background:linear-gradient(100deg,rgba(4,6,10,.66) 0%,rgba(4,6,10,.30) 52%,rgba(4,6,10,.58) 100%)}
 body.gece #karart{background:rgba(0,0,0,.82)}
 body.gece .foto{opacity:0!important}
+/* Nachtansicht: ohne Fotos nur große Uhr, Datum und Wetter in der Mitte */
+#nacht{display:none;position:fixed;inset:0;z-index:6;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  color:rgba(255,255,255,.86);pointer-events:none;transition:transform 4s ease}
+body.gece #nacht{display:flex}
+html body.aus #nacht{display:none}
+body.gece #pano,body.gece #ds,body.gece #dsRadio{opacity:0!important;pointer-events:none}
+.n-saat{font-size:min(24vw,30vh);font-weight:400;line-height:.9;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.n-tarih{font-size:min(4vw,30px);font-weight:500;margin-top:14px;color:rgba(255,255,255,.62)}
+.n-wetter{display:flex;align-items:center;gap:18px;margin-top:min(5vh,40px)}
+.n-wetter .ikon svg{width:min(11vw,84px);height:min(11vw,84px);stroke-width:1.4}
+.n-temp{font-size:min(12vw,96px);font-weight:400;line-height:1;letter-spacing:-.03em}
+.n-durum{font-size:min(3.4vw,24px);color:rgba(255,255,255,.55);text-align:left;line-height:1.3}
 /* Radio */
 .radio{flex:none;display:flex;align-items:center;gap:14px;padding:14px 16px}
 .r-play{flex:none;width:54px;height:54px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;color:#0c0f16;
@@ -285,6 +297,11 @@ body.sadeceFoto #tamFoto{opacity:1}
 <div class="lichter" id="lichterR" aria-hidden="true"></div>
 <div class="lichter" id="lichterO" aria-hidden="true"></div>
 <canvas id="effekt" aria-hidden="true"></canvas>
+<div id="nacht" aria-hidden="true">
+  <div class="n-saat" id="nSaat">--:--</div>
+  <div class="n-tarih" id="nTarih"></div>
+  <div class="n-wetter"><span class="ikon" id="nIkon"></span><div class="n-temp" id="nTemp"></div><div class="n-durum" id="nDurum"></div></div>
+</div>
 <div id="ds" aria-hidden="true">
   <div class="ds-uhr"><div class="ds-saat" id="dsSaat">--:--</div><div class="ds-tarih" id="dsTarih"></div></div>
   <div class="ds-rechts">
@@ -319,7 +336,7 @@ body.sadeceFoto #tamFoto{opacity:1}
 (function () {
   'use strict';
 
-  var VERSION = '15';   // bei jeder Änderung zusammen mit version.json erhöhen
+  var VERSION = '16';   // bei jeder Änderung zusammen mit version.json erhöhen
   var AYAR = { veriDk: 2, havaDk: 15, fotoSn: 60, yenidenYukleSaat: 6, geceBas: 23, geceBit: 6 };
   var GUN = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   var GUN_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -380,6 +397,7 @@ body.sadeceFoto #tamFoto{opacity:1}
       var laeuft = an < aus ? (jetzt >= an && jetzt < aus) : (jetzt >= an || jetzt < aus);
       return { plan: true, aus: !laeuft };
     }
+    if (q.get('nacht') === '1') return { plan: false, aus: true };   // Vorschau der Nachtansicht
     return { plan: false, aus: d.getHours() >= AYAR.geceBas || d.getHours() < AYAR.geceBit };
   }
 
@@ -391,6 +409,8 @@ body.sadeceFoto #tamFoto{opacity:1}
     $('tarih').innerHTML = esc(GUN[d.getDay()]) + ' <span>' + d.getDate() + '. ' + AY[d.getMonth()] + '</span>';
     $('dsSaat').textContent = $('saat').textContent;
     $('dsTarih').textContent = GUN[d.getDay()] + ', ' + d.getDate() + '. ' + AY[d.getMonth()];
+    $('nSaat').textContent = $('saat').textContent;
+    $('nTarih').textContent = $('dsTarih').textContent;
     var z = zeitplan(d);
     var schlaf = z.aus && Date.now() > uyanikBitis;
     document.body.classList.toggle('gece', schlaf);
@@ -583,6 +603,9 @@ body.sadeceFoto #tamFoto{opacity:1}
     $('hDerece').textContent = Math.round(c.temperature_2m) + '°';
     $('dsTemp').textContent = Math.round(c.temperature_2m) + '°';
     $('dsIkon').innerHTML = ikon(c.weather_code, c.is_day);
+    $('nTemp').textContent = Math.round(c.temperature_2m) + '°';
+    $('nIkon').innerHTML = ikon(c.weather_code, c.is_day);
+    $('nDurum').innerHTML = esc(HAVA[c.weather_code] || '') + '<br>' + Math.round(d.temperature_2m_max[0]) + '° / ' + Math.round(d.temperature_2m_min[0]) + '°';
     effektSetzen(effektArt(c.weather_code));
     $('hDurum').textContent = (HAVA[c.weather_code] || '') + ' · ' + (h._ad || '');
     var gd = d.sunrise[0] ? d.sunrise[0].slice(11, 16) : '', gb = d.sunset[0] ? d.sunset[0].slice(11, 16) : '';
@@ -825,7 +848,9 @@ body.sadeceFoto #tamFoto{opacity:1}
 
   /* ---------- Ekran koruma: hafif kaydırma ---------- */
   setInterval(function () {
-    $('pano').style.transform = 'translate(' + (Math.random() * 10 - 5).toFixed(1) + 'px,' + (Math.random() * 10 - 5).toFixed(1) + 'px)';
+    var verschiebung = 'translate(' + (Math.random() * 10 - 5).toFixed(1) + 'px,' + (Math.random() * 10 - 5).toFixed(1) + 'px)';
+    $('pano').style.transform = verschiebung;
+    $('nacht').style.transform = verschiebung.replace(/(-?[\d.]+)px/g, function (m, z) { return (z * 3).toFixed(1) + 'px'; });   // nachts stärker gegen Einbrennen
   }, 10 * 60000);
 
   /* ---------- Demo verisi ---------- */
